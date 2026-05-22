@@ -1,4 +1,4 @@
-const dashboardRoot = document.querySelector('[data-dashboard="solar"]');
+﻿const dashboardRoot = document.querySelector('[data-dashboard="solar"]');
 
 if (dashboardRoot) {
     const apiBase = (dashboardRoot.dataset.apiBase || '').replace(/\/$/, '');
@@ -89,16 +89,16 @@ if (dashboardRoot) {
                 executiveSummary: 'Con 12,000 kWh/mes a $1,050/kWh, Majayura destina ~$12.6M COP mensuales a electricidad. El A/C (30%) y la lavandería (8%) son las palancas clave: moverlas al mediodía solar puede ahorrar hasta $2.5M/mes sin inversión adicional.',
                 solarContext: 'Riohacha · 6.5 kWh/m²/día · Hotel 24h · Tarifa comercial Air-e $1,050/kWh',
                 insights: [
-                    { icon: '🧺', title: 'Lavandería en ventana solar', body: 'Mover el ciclo de lavado de sábanas y toallas al mediodía solar (10:00-14:00) puede ahorrarte $48,500 COP/día. El compresor aprovecha el valle tarifario y la radiación máxima.', impact: 'alto' },
-                    { icon: '❄️', title: 'Pre-enfriamiento antes del pico tarifario', body: 'Bajar el A/C a 21°C entre las 15:00-17:30 y subirlo a 24°C tras las 18:00 reduce el consumo en hora pico hasta un 20% sin afectar el confort de los huéspedes.', impact: 'alto' },
-                    { icon: '💡', title: 'Iluminación LED en áreas comunes', body: 'Con el 15% del consumo en iluminación, migrar a LED de 9W (vs 60W incandescente) recorta esa partida un 85%. Retorno de inversión en menos de 8 meses en operación 24h.', impact: 'medio' },
+                    { title: 'Lavandería en ventana solar', body: 'Mover el ciclo de lavado de sábanas y toallas al mediodía solar (10:00-14:00) puede ahorrarte $48,500 COP/día. El compresor aprovecha el valle tarifario y la radiación máxima.', impact: 'alto' },
+                    { title: 'Pre-enfriamiento antes del pico tarifario', body: 'Bajar el A/C a 21°C entre las 15:00-17:30 y subirlo a 24°C tras las 18:00 reduce el consumo en hora pico hasta un 20% sin afectar el confort de los huéspedes.', impact: 'alto' },
+                    { title: 'Iluminación LED en áreas comunes', body: 'Con el 15% del consumo en iluminación, migrar a LED de 9W (vs 60W incandescente) recorta esa partida un 85%. Retorno de inversión en menos de 8 meses en operación 24h.', impact: 'medio' },
                 ],
             },
             fallbackAlerts: [
-                { type: 'critical', icon: '⚡', title: 'Pico tarifario en 2h — protege la lavandería', message: 'Entre 18:00-21:00 Air-e aplica tarifa máxima. Cada ciclo de lavadora industrial en ese rango cuesta ~$18,000 COP extra. Termina la lavandería antes de las 17:00.', action: 'Finalizar ciclos de lavado antes de las 17:00', timeWindow: '18:00 - 21:00' },
-                { type: 'warning', icon: '🌡️', title: 'Temperatura >34°C — A/C al límite', message: 'Con temperatura superior a 34°C el compresor trabaja un 25% más. Pre-enfría las habitaciones con huéspedes entre 12:00-16:00 cuando la tarifa es baja.', action: 'Pre-enfriar habitaciones entre 12:00-16:00', timeWindow: '12:00 - 16:00' },
-                { type: 'warning', icon: '☀️', title: 'Ventana solar óptima — activa lavandería y bombas', message: 'Las próximas horas tienen la máxima radiación del día en Riohacha. Momento ideal para cargas resistivas: lavandería, bombas de agua y cocina industrial.', action: 'Programar lavandería industrial y bombas ahora', timeWindow: '10:00 - 14:00' },
-                { type: 'info', icon: '🏨', title: 'ROI solar estimado: 2.8 años', message: 'Un sistema de 8 kWp cubriría el 40% del consumo del hotel. Con tarifa de $1,050/kWh y 6.5 kWh/m²/día en Riohacha, la inversión (~$28M COP) se recupera en 2.8 años.', action: 'Ver simulación completa en pestaña Simulador', timeWindow: 'Análisis permanente' },
+                { type: 'critical', title: 'Pico tarifario en 2h — protege la lavandería', message: 'Entre 18:00-21:00 Air-e aplica tarifa máxima. Cada ciclo de lavadora industrial en ese rango cuesta ~$18,000 COP extra. Termina la lavandería antes de las 17:00.', action: 'Finalizar ciclos de lavado antes de las 17:00', timeWindow: '18:00 - 21:00' },
+                { type: 'warning', title: 'Temperatura >34°C — A/C al límite', message: 'Con temperatura superior a 34°C el compresor trabaja un 25% más. Pre-enfría las habitaciones con huéspedes entre 12:00-16:00 cuando la tarifa es baja.', action: 'Pre-enfriar habitaciones entre 12:00-16:00', timeWindow: '12:00 - 16:00' },
+                { type: 'warning', title: 'Ventana solar óptima — activa lavandería y bombas', message: 'Las próximas horas tienen la máxima radiación del día en Riohacha. Momento ideal para cargas resistivas: lavandería, bombas de agua y cocina industrial.', action: 'Programar lavandería industrial y bombas ahora', timeWindow: '10:00 - 14:00' },
+                { type: 'info', title: 'ROI solar estimado: 2.8 años', message: 'Un sistema de 8 kWp cubriría el 40% del consumo del hotel. Con tarifa de $1,050/kWh y 6.5 kWh/m²/día en Riohacha, la inversión (~$28M COP) se recupera en 2.8 años.', action: 'Ver simulación completa en pestaña Simulador', timeWindow: 'Análisis permanente' },
             ],
             fallbackAlertsContext: 'Hotel Majayura · Riohacha · Tarifa comercial Air-e $1,050/kWh · Datos precargados',
         },
@@ -129,16 +129,16 @@ if (dashboardRoot) {
                 executiveSummary: 'Con 28,000 kWh/mes a $850/kWh, la Hielera invierte ~$23.8M COP mensuales en electricidad. El 80% corresponde a compresores — concentrar sus ciclos en la ventana solar (10:00-14:00) puede ahorrar hasta $5.5M/mes sin cambiar ningún equipo.',
                 solarContext: 'Riohacha · 6.5 kWh/m²/día · Industrial · Compresores 80% carga · Tarifa media tensión $850/kWh',
                 insights: [
-                    { icon: '🧊', title: 'Compresores al mediodía solar = máximo ahorro', body: 'Con temperatura >34°C el compresor trabaja 25% más. Correr los ciclos de congelación de 10:00-14:00 reduce el estrés térmico, aprovecha la menor tarifa y puede ahorrar hasta $125,000 COP/día.', impact: 'alto' },
-                    { icon: '🔧', title: 'Mantenimiento preventivo de serpentines', body: 'Serpentines con depósito de calcáreo o polvo aumentan el consumo del compresor hasta 15%. Una limpieza trimestral ahorra ~$42,000 COP/día — el retorno es inmediato y no requiere paro prolongado.', impact: 'alto' },
-                    { icon: '🚪', title: 'Control de aperturas en hora pico', body: 'Cada apertura de cámara fría entre 18:00-21:00 pierde 3-5 min de frío, forzando al compresor a recuperar en tarifa máxima. Limitar aperturas en ese rango ahorra ~$18,000 COP/día.', impact: 'medio' },
+                    { title: 'Compresores al mediodía solar = máximo ahorro', body: 'Con temperatura >34°C el compresor trabaja 25% más. Correr los ciclos de congelación de 10:00-14:00 reduce el estrés térmico, aprovecha la menor tarifa y puede ahorrar hasta $125,000 COP/día.', impact: 'alto' },
+                    { title: 'Mantenimiento preventivo de serpentines', body: 'Serpentines con depósito de calcáreo o polvo aumentan el consumo del compresor hasta 15%. Una limpieza trimestral ahorra ~$42,000 COP/día — el retorno es inmediato y no requiere paro prolongado.', impact: 'alto' },
+                    { title: 'Control de aperturas en hora pico', body: 'Cada apertura de cámara fría entre 18:00-21:00 pierde 3-5 min de frío, forzando al compresor a recuperar en tarifa máxima. Limitar aperturas en ese rango ahorra ~$18,000 COP/día.', impact: 'medio' },
                 ],
             },
             fallbackAlerts: [
-                { type: 'critical', icon: '⚡', title: 'Pico tarifario — reduce compresores no esenciales', message: 'Entre 18:00-21:00 la tarifa sube al máximo. Con 80% del consumo en compresores, cada hora de operación en pico cuesta ~$113,000 COP extra vs el mediodía. Reduce ciclos al mínimo.', action: 'Bajar compresores al 40% de capacidad entre 18:00-21:00', timeWindow: '18:00 - 21:00' },
-                { type: 'critical', icon: '🌡️', title: 'Temperatura alta — compresores bajo estrés térmico', message: 'Con temperatura >34°C los compresores trabajan 25-30% más para mantener las cámaras frías. Pre-congelar antes del calor máximo reduce el trabajo en la franja más cara del día.', action: 'Pre-congelar cámaras entre 06:00-10:00 antes del calor', timeWindow: '06:00 - 10:00' },
-                { type: 'warning', icon: '☀️', title: 'Ventana solar óptima — concentra producción de hielo', message: 'Entre 10:00 y 14:00 es el momento más eficiente: menor tarifa, mayor radiación, temperatura todavía manejable. Activa producción máxima de hielo ahora.', action: 'Activar producción máxima de hielo en ventana solar', timeWindow: '10:00 - 14:00' },
-                { type: 'info', icon: '📊', title: 'Sistema solar reduciría factura un 45%', message: 'Con 20 kWp instalados, la Hielera cubriría ~45% del consumo en horas de producción máxima. La inversión (~$70M COP) se recupera en 3.5 años con la tarifa industrial de $850/kWh.', action: 'Ver simulación detallada en pestaña Simulador', timeWindow: 'Análisis permanente' },
+                { type: 'critical', title: 'Pico tarifario — reduce compresores no esenciales', message: 'Entre 18:00-21:00 la tarifa sube al máximo. Con 80% del consumo en compresores, cada hora de operación en pico cuesta ~$113,000 COP extra vs el mediodía. Reduce ciclos al mínimo.', action: 'Bajar compresores al 40% de capacidad entre 18:00-21:00', timeWindow: '18:00 - 21:00' },
+                { type: 'critical', title: 'Temperatura alta — compresores bajo estrés térmico', message: 'Con temperatura >34°C los compresores trabajan 25-30% más para mantener las cámaras frías. Pre-congelar antes del calor máximo reduce el trabajo en la franja más cara del día.', action: 'Pre-congelar cámaras entre 06:00-10:00 antes del calor', timeWindow: '06:00 - 10:00' },
+                { type: 'warning', title: 'Ventana solar óptima — concentra producción de hielo', message: 'Entre 10:00 y 14:00 es el momento más eficiente: menor tarifa, mayor radiación, temperatura todavía manejable. Activa producción máxima de hielo ahora.', action: 'Activar producción máxima de hielo en ventana solar', timeWindow: '10:00 - 14:00' },
+                { type: 'info', title: 'Sistema solar reduciría factura un 45%', message: 'Con 20 kWp instalados, la Hielera cubriría ~45% del consumo en horas de producción máxima. La inversión (~$70M COP) se recupera en 3.5 años con la tarifa industrial de $850/kWh.', action: 'Ver simulación detallada en pestaña Simulador', timeWindow: 'Análisis permanente' },
             ],
             fallbackAlertsContext: 'Hielera del Caribe · Riohacha · Compresores industriales · Tarifa media tensión $850/kWh · Datos precargados',
         },
@@ -169,16 +169,16 @@ if (dashboardRoot) {
                 executiveSummary: 'Con 8,500 kWh/mes a $1,050/kWh, el restaurante gasta ~$8.9M COP mensuales en electricidad. La cocina industrial (40%) y refrigeración (25%) dominan el consumo. Adelantar la preparación al mediodía solar puede ahorrar hasta $1.4M/mes.',
                 solarContext: 'Riohacha · 6.5 kWh/m²/día · Restaurante 09:00-22:00 · Tarifa comercial Air-e $1,050/kWh',
                 insights: [
-                    { icon: '🍳', title: 'Mise en place al mediodía — cocina antes del pico', body: 'Adelantar fondos, bases y preparaciones largas a las 09:00-12:00 evita tener la plancha y freidora encendidas entre 18:00-22:00, cuando la tarifa es máxima. Ahorro potencial: $28,000 COP/día.', impact: 'alto' },
-                    { icon: '🧊', title: 'Pre-enfriar neveras antes del cierre', body: 'Bajar la temperatura de neveras 2°C antes del cierre (21:00) permite reducir ciclos del compresor durante las primeras horas de la noche, ahorrando ~$12,000 COP/día sin riesgo de cadena de frío.', impact: 'medio' },
-                    { icon: '❄️', title: 'A/C solo en horario de servicio activo', body: 'El A/C en reposo pre-apertura y post-cierre representa hasta el 20% del consumo de climatización. Encenderlo 30 min antes de abrir y apagarlo al cerrar ahorra ~$8,500 COP/día.', impact: 'medio' },
+                    { title: 'Mise en place al mediodía — cocina antes del pico', body: 'Adelantar fondos, bases y preparaciones largas a las 09:00-12:00 evita tener la plancha y freidora encendidas entre 18:00-22:00, cuando la tarifa es máxima. Ahorro potencial: $28,000 COP/día.', impact: 'alto' },
+                    { title: 'Pre-enfriar neveras antes del cierre', body: 'Bajar la temperatura de neveras 2°C antes del cierre (21:00) permite reducir ciclos del compresor durante las primeras horas de la noche, ahorrando ~$12,000 COP/día sin riesgo de cadena de frío.', impact: 'medio' },
+                    { title: 'A/C solo en horario de servicio activo', body: 'El A/C en reposo pre-apertura y post-cierre representa hasta el 20% del consumo de climatización. Encenderlo 30 min antes de abrir y apagarlo al cerrar ahorra ~$8,500 COP/día.', impact: 'medio' },
                 ],
             },
             fallbackAlerts: [
-                { type: 'critical', icon: '⚡', title: 'Pico tarifario — minimiza cocina pesada', message: 'Entre 18:00-21:00 la tarifa Air-e es máxima. Tener plancha, freidoras y horno encendidos cuesta un 35% más que al mediodía. Usa solo los quemadores esenciales para el servicio nocturno.', action: 'Terminar cocción de bases antes de las 17:30', timeWindow: '18:00 - 21:00' },
-                { type: 'warning', icon: '🌡️', title: 'Calor extremo — A/C y cocina en conflicto', message: 'Con temperatura >34°C y cocina industrial activa, el A/C lucha contra dos fuentes de calor simultáneas. Activa ventilación cruzada y enciende el A/C con anticipación para reducir la carga.', action: 'Activar A/C y ventilación cruzada antes del servicio', timeWindow: '10:30 - 11:30' },
-                { type: 'warning', icon: '☀️', title: 'Ventana solar — prepara mise en place ahora', message: 'Las próximas horas son las más baratas del día en tarifa eléctrica. Momento ideal para toda la cocción larga: fondos, salsas, horneados y frituras anticipadas.', action: 'Encender cocina industrial para preparación del día', timeWindow: '09:00 - 13:00' },
-                { type: 'info', icon: '☀️', title: 'Panel solar para refrigeración autónoma', message: 'Con 6 kWp instalados, el restaurante cubriría toda la carga de refrigeración en horas solares. Inversión ~$21M COP con payback estimado de 2.5 años a tarifa comercial de $1,050/kWh.', action: 'Calcular sistema en pestaña Simulador', timeWindow: 'Análisis permanente' },
+                { type: 'critical', title: 'Pico tarifario — minimiza cocina pesada', message: 'Entre 18:00-21:00 la tarifa Air-e es máxima. Tener plancha, freidoras y horno encendidos cuesta un 35% más que al mediodía. Usa solo los quemadores esenciales para el servicio nocturno.', action: 'Terminar cocción de bases antes de las 17:30', timeWindow: '18:00 - 21:00' },
+                { type: 'warning', title: 'Calor extremo — A/C y cocina en conflicto', message: 'Con temperatura >34°C y cocina industrial activa, el A/C lucha contra dos fuentes de calor simultáneas. Activa ventilación cruzada y enciende el A/C con anticipación para reducir la carga.', action: 'Activar A/C y ventilación cruzada antes del servicio', timeWindow: '10:30 - 11:30' },
+                { type: 'warning', title: 'Ventana solar — prepara mise en place ahora', message: 'Las próximas horas son las más baratas del día en tarifa eléctrica. Momento ideal para toda la cocción larga: fondos, salsas, horneados y frituras anticipadas.', action: 'Encender cocina industrial para preparación del día', timeWindow: '09:00 - 13:00' },
+                { type: 'info', title: 'Panel solar para refrigeración autónoma', message: 'Con 6 kWp instalados, el restaurante cubriría toda la carga de refrigeración en horas solares. Inversión ~$21M COP con payback estimado de 2.5 años a tarifa comercial de $1,050/kWh.', action: 'Calcular sistema en pestaña Simulador', timeWindow: 'Análisis permanente' },
             ],
             fallbackAlertsContext: 'Sazón Guajira · Riohacha · Cocina industrial · Tarifa comercial Air-e $1,050/kWh · Datos precargados',
         },
@@ -210,16 +210,16 @@ if (dashboardRoot) {
                 executiveSummary: 'Con 246,000 habitantes y 6.5+ kWh/m²/día de radiación, Riohacha tiene el mayor potencial solar de Colombia. Una adopción masiva entre PYMES podría reducir la factura eléctrica colectiva en más de $40M COP/día y disminuir la dependencia de la red de Air-e.',
                 solarContext: 'Riohacha, La Guajira · 6.5-7.0 kWh/m²/día · 246,000 hab · Mayor potencial solar de Colombia',
                 insights: [
-                    { icon: '☀️', title: 'Mayor irradiación solar de Colombia', body: 'Riohacha recibe 6.5-7.0 kWh/m²/día — 40% más que Bogotá y 25% más que Medellín. Los paneles solares tienen aquí el mejor retorno de inversión del país: en promedio, 2.5-3 años.', impact: 'alto' },
-                    { icon: '🏙️', title: 'PYMES: potencial de ahorro colectivo $40M/día', body: 'Si el 20% de las PYMES de Riohacha adoptaran sistemas solares de 5 kWp, el ahorro colectivo superaría los $40M COP/día — equivalente a abastecer 8,000 hogares con energía solar gratuita.', impact: 'alto' },
-                    { icon: '⚡', title: 'Gestión de demanda reduce apagones', body: 'Los apagones en La Guajira ocurren principalmente entre 18:00-21:00 cuando la demanda supera la red. Si el 30% de los consumidores desplazara cargas al mediodía solar, los cortes se reducirían un 60%.', impact: 'medio' },
+                    { title: 'Mayor irradiación solar de Colombia', body: 'Riohacha recibe 6.5-7.0 kWh/m²/día — 40% más que Bogotá y 25% más que Medellín. Los paneles solares tienen aquí el mejor retorno de inversión del país: en promedio, 2.5-3 años.', impact: 'alto' },
+                    { title: 'PYMES: potencial de ahorro colectivo $40M/día', body: 'Si el 20% de las PYMES de Riohacha adoptaran sistemas solares de 5 kWp, el ahorro colectivo superaría los $40M COP/día — equivalente a abastecer 8,000 hogares con energía solar gratuita.', impact: 'alto' },
+                    { title: 'Gestión de demanda reduce apagones', body: 'Los apagones en La Guajira ocurren principalmente entre 18:00-21:00 cuando la demanda supera la red. Si el 30% de los consumidores desplazara cargas al mediodía solar, los cortes se reducirían un 60%.', impact: 'medio' },
                 ],
             },
             fallbackAlerts: [
-                { type: 'critical', icon: '⚡', title: 'Pico de demanda urbana — riesgo de cortes', message: 'Entre 18:00-21:00 Riohacha alcanza su máxima demanda. En esta franja la probabilidad de cortes por sobrecarga de la red de Air-e es más alta. Recomendado: adelantar cargas al mediodía.', action: 'Comunicar a comercios: cargas pesadas antes de las 17:00', timeWindow: '18:00 - 21:00' },
-                { type: 'warning', icon: '🌡️', title: 'Temperatura extrema — consumo urbano elevado', message: 'Con temperatura >34°C el consumo colectivo de A/C en Riohacha aumenta ~18%, presionando la red de Air-e. Ventilación cruzada y pre-enfriamiento solar mitigan el pico de demanda.', action: 'Promover pre-enfriamiento entre 10:00-16:00 por redes', timeWindow: '14:00 - 20:00' },
-                { type: 'warning', icon: '☀️', title: 'Ventana solar óptima activa en toda La Guajira', message: 'La radiación actual en Riohacha es máxima. Esta es la franja donde los paneles generan su pico de producción y donde mover cargas equivale a energía solar gratuita para miles de hogares.', action: 'Activar campaña: concentrar consumo ahora en redes', timeWindow: '10:00 - 14:00' },
-                { type: 'info', icon: '📊', title: 'Riohacha puede liderar la transición solar del Caribe', message: 'Con el mayor índice de radiación de Colombia, 6.5+ kWh/m²/día y costos de instalación bajando año a año, Riohacha tiene las condiciones únicas para liderar la transición energética solar en el Caribe colombiano.', action: 'Ver potencial en pestaña Simulador', timeWindow: 'Visión estratégica' },
+                { type: 'critical', title: 'Pico de demanda urbana — riesgo de cortes', message: 'Entre 18:00-21:00 Riohacha alcanza su máxima demanda. En esta franja la probabilidad de cortes por sobrecarga de la red de Air-e es más alta. Recomendado: adelantar cargas al mediodía.', action: 'Comunicar a comercios: cargas pesadas antes de las 17:00', timeWindow: '18:00 - 21:00' },
+                { type: 'warning', title: 'Temperatura extrema — consumo urbano elevado', message: 'Con temperatura >34°C el consumo colectivo de A/C en Riohacha aumenta ~18%, presionando la red de Air-e. Ventilación cruzada y pre-enfriamiento solar mitigan el pico de demanda.', action: 'Promover pre-enfriamiento entre 10:00-16:00 por redes', timeWindow: '14:00 - 20:00' },
+                { type: 'warning', title: 'Ventana solar óptima activa en toda La Guajira', message: 'La radiación actual en Riohacha es máxima. Esta es la franja donde los paneles generan su pico de producción y donde mover cargas equivale a energía solar gratuita para miles de hogares.', action: 'Activar campaña: concentrar consumo ahora en redes', timeWindow: '10:00 - 14:00' },
+                { type: 'info', title: 'Riohacha puede liderar la transición solar del Caribe', message: 'Con el mayor índice de radiación de Colombia, 6.5+ kWh/m²/día y costos de instalación bajando año a año, Riohacha tiene las condiciones únicas para liderar la transición energética solar en el Caribe colombiano.', action: 'Ver potencial en pestaña Simulador', timeWindow: 'Visión estratégica' },
             ],
             fallbackAlertsContext: 'Riohacha, La Guajira · 246,000 hab · Mayor potencial solar de Colombia · Tarifa residencial $780/kWh · Datos precargados',
         },
@@ -436,7 +436,7 @@ if (dashboardRoot) {
         const alertEl = document.querySelector('[data-bind="ai-alert"]');
         if (alertEl) {
             if (payload.alert) {
-                alertEl.textContent = `⚠ ${payload.alert}`;
+                alertEl.textContent = payload.alert;
                 alertEl.classList.remove('hidden');
             } else {
                 alertEl.classList.add('hidden');
@@ -494,6 +494,29 @@ if (dashboardRoot) {
 
     /* ── Map Card (Leaflet) ── */
     let solarMap = null;
+    let solarMapTileLayer = null;
+
+    const getMapTileUrl = () => {
+        const theme = document.documentElement.getAttribute('data-theme') || 'dark';
+        return theme === 'light'
+            ? 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png'
+            : 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
+    };
+
+    const syncMapTheme = () => {
+        if (!solarMap || typeof L === 'undefined') return;
+
+        const tileUrl = getMapTileUrl();
+        if (solarMapTileLayer && solarMapTileLayer._url === tileUrl) return;
+
+        if (solarMapTileLayer) {
+            solarMap.removeLayer(solarMapTileLayer);
+        }
+
+        solarMapTileLayer = L.tileLayer(tileUrl, {
+            maxZoom: 19,
+        }).addTo(solarMap);
+    };
 
     const renderMapCard = (today, score) => {
         if (elements.mapLegend) {
@@ -525,10 +548,7 @@ if (dashboardRoot) {
             attributionControl: false,
         });
 
-        // Dark tile layer
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-            maxZoom: 19,
-        }).addTo(solarMap);
+        syncMapTheme();
 
         // Solar radiation marker for Riohacha
         if (today) {
@@ -1042,10 +1062,10 @@ if (dashboardRoot) {
     const alertsCache = {};
 
     const STATIC_ALERTS = [
-        { type: 'critical', icon: '⚡', title: 'Hora pico tarifaria en 2h', message: 'Entre las 18:00-21:00 la tarifa de Air-e sube hasta un 35%. Evita activar cargas pesadas en esa franja.', action: 'Programar cargas para antes de las 17:00', timeWindow: '18:00 - 21:00' },
-        { type: 'warning', icon: '🌡️', title: 'Temperatura alta esperada', message: 'Temperaturas superiores a 34°C aumentan el consumo del A/C hasta un 25%. Gestiona el pre-enfriamiento solar.', action: 'Pre-enfriar espacios entre 12:00-16:00', timeWindow: '14:00 - 18:00' },
-        { type: 'warning', icon: '☀️', title: 'Ventana solar óptima activa', message: 'Las próximas 4 horas tienen la máxima radiación del día en Riohacha. Concentra el consumo pesado ahora.', action: 'Activar compresores, lavandería y equipos industriales', timeWindow: '10:00 - 14:00' },
-        { type: 'info', icon: '📊', title: 'Potencial solar sin aprovechar', message: 'Riohacha recibe 6.5+ kWh/m² diarios. Sin paneles, el 100% de esa energía se pierde. Con 5 kWp el payback es menor a 3 años.', action: 'Ver simulación de ROI en la pestaña Simulador', timeWindow: 'Gestión continua' },
+        { type: 'critical', title: 'Hora pico tarifaria en 2h', message: 'Entre las 18:00-21:00 la tarifa de Air-e sube hasta un 35%. Evita activar cargas pesadas en esa franja.', action: 'Programar cargas para antes de las 17:00', timeWindow: '18:00 - 21:00' },
+        { type: 'warning', title: 'Temperatura alta esperada', message: 'Temperaturas superiores a 34°C aumentan el consumo del A/C hasta un 25%. Gestiona el pre-enfriamiento solar.', action: 'Pre-enfriar espacios entre 12:00-16:00', timeWindow: '14:00 - 18:00' },
+        { type: 'warning', title: 'Ventana solar óptima activa', message: 'Las próximas 4 horas tienen la máxima radiación del día en Riohacha. Concentra el consumo pesado ahora.', action: 'Activar compresores, lavandería y equipos industriales', timeWindow: '10:00 - 14:00' },
+        { type: 'info', title: 'Potencial solar sin aprovechar', message: 'Riohacha recibe 6.5+ kWh/m² diarios. Sin paneles, el 100% de esa energía se pierde. Con 5 kWp el payback es menor a 3 años.', action: 'Ver simulación de ROI en la pestaña Simulador', timeWindow: 'Gestión continua' },
     ];
 
     const renderAlertsList = (alerts, context) => {
@@ -1053,24 +1073,23 @@ if (dashboardRoot) {
         if (!list) return;
 
         const typeColors = {
-            critical: { text: 'text-red-300',    bg: 'text-red-400/70',  title: 'text-red-200' },
-            warning:  { text: 'text-yellow-200',  bg: 'text-yellow-400/70', title: 'text-yellow-100' },
-            info:     { text: 'text-sky-200',     bg: 'text-sky-400/70',  title: 'text-sky-100' },
+            critical: { text: 'alert-text-critical', bg: 'alert-badge-critical', title: 'alert-title-critical' },
+            warning:  { text: 'alert-text-warning',  bg: 'alert-badge-warning', title: 'alert-title-warning' },
+            info:     { text: 'alert-text-info',     bg: 'alert-badge-info',    title: 'alert-title-info' },
         };
 
         list.innerHTML = alerts.map(a => {
             const c = typeColors[a.type] || typeColors.info;
             return `
-                <div class="alert-item ${a.type}">
-                    <div class="text-2xl shrink-0 mt-0.5">${a.icon}</div>
+                <div class="alert-item ${a.type} alert-card">
                     <div class="flex-1 min-w-0">
                         <div class="flex items-center gap-2 flex-wrap">
                             <span class="text-sm font-semibold ${c.title}">${a.title}</span>
-                            <span class="text-[10px] uppercase tracking-wider ${c.bg}">${a.type === 'critical' ? 'Crítico' : a.type === 'warning' ? 'Advertencia' : 'Info'}</span>
-                            ${a.timeWindow ? `<span class="text-[10px] text-white/35">${a.timeWindow}</span>` : ''}
+                            <span class="text-[10px] uppercase tracking-wider ${c.bg} alert-badge">${a.type === 'critical' ? 'Crítico' : a.type === 'warning' ? 'Advertencia' : 'Info'}</span>
+                            ${a.timeWindow ? `<span class="alert-time text-[10px]">${a.timeWindow}</span>` : ''}
                         </div>
                         <p class="mt-1 text-sm leading-5 ${c.text}/80">${a.message}</p>
-                        ${a.action ? `<div class="mt-2 text-[11px] text-white/40">→ ${a.action}</div>` : ''}
+                        ${a.action ? `<div class="alert-action mt-2 text-[11px]">→ ${a.action}</div>` : ''}
                     </div>
                 </div>
             `;
@@ -1139,9 +1158,9 @@ if (dashboardRoot) {
     const insightsCache = {};
 
     const STATIC_INSIGHTS = [
-        { icon: '☀️', title: 'Máximo potencial solar de Colombia', body: 'Riohacha recibe hasta 7.0 kWh/m²/día — 40% más que el promedio nacional. El sol es el mayor activo energético de La Guajira.', impact: 'alto' },
-        { icon: '⚡', title: 'Ventana solar de mayor ahorro', body: 'Concentrar cargas pesadas entre 10:00 y 14:00 puede reducir la factura eléctrica hasta un 35% sin inversión en infraestructura.', impact: 'alto' },
-        { icon: '💰', title: 'ROI solar menor a 3 años', body: 'Con tarifas Air-e de 780-1050 COP/kWh y radiación de 6.5 kWh/m²/día, un sistema de 5 kWp se paga solo en 2.8 años en promedio.', impact: 'medio' },
+        { title: 'Máximo potencial solar de Colombia', body: 'Riohacha recibe hasta 7.0 kWh/m²/día — 40% más que el promedio nacional. El sol es el mayor activo energético de La Guajira.', impact: 'alto' },
+        { title: 'Ventana solar de mayor ahorro', body: 'Concentrar cargas pesadas entre 10:00 y 14:00 puede reducir la factura eléctrica hasta un 35% sin inversión en infraestructura.', impact: 'alto' },
+        { title: 'ROI solar menor a 3 años', body: 'Con tarifas Air-e de 780-1050 COP/kWh y radiación de 6.5 kWh/m²/día, un sistema de 5 kWp se paga solo en 2.8 años en promedio.', impact: 'medio' },
     ];
 
     const renderInsights = (data) => {
@@ -1161,7 +1180,6 @@ if (dashboardRoot) {
             const impactColors = { alto: 'text-emerald-400', medio: 'text-yellow-400', bajo: 'text-sky-400' };
             grid.innerHTML = items.map(i => `
                 <div class="insight-card">
-                    <div class="text-2xl mb-3">${i.icon}</div>
                     <div class="text-sm font-semibold text-white mb-2">${i.title}</div>
                     <p class="text-xs leading-5 text-white/60">${i.body}</p>
                     <div class="mt-3 text-[10px] uppercase tracking-wider ${impactColors[i.impact] || 'text-white/40'}">Impacto ${i.impact}</div>
@@ -1433,8 +1451,8 @@ if (dashboardRoot) {
         if (badge) badge.classList.remove('hidden');
         if (msg) {
             msg.textContent = isServiceUnavailable(error)
-                ? '⚡ La cuota del agente IA está agotada por hoy. Mostrando recomendaciones precargadas para este perfil.'
-                : '⚠ No se pudo conectar con el agente. Mostrando recomendaciones predeterminadas.';
+                ? 'La cuota del agente IA está agotada por hoy. Mostrando recomendaciones precargadas para este perfil.'
+                : 'No se pudo conectar con el agente. Mostrando recomendaciones predeterminadas.';
             msg.classList.remove('hidden');
         }
     };
@@ -1887,6 +1905,7 @@ if (dashboardRoot) {
     const applyTheme = (theme) => {
         document.documentElement.setAttribute('data-theme', theme);
         localStorage.setItem('solar-theme', theme);
+        syncMapTheme();
         // Swap icon
         if (themeToggle) {
             themeToggle.innerHTML = theme === 'light'
@@ -1914,3 +1933,4 @@ if (dashboardRoot) {
     loadDashboard();
     setInterval(loadDashboard, 5 * 60 * 1000);
 }
+

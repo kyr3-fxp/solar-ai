@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Olympus")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+2997a743673dcd3844c46dd43869fefa46315a92")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+956212ae5a9c70e5d6b61d5f399e613300c5f42b")]
 [assembly: System.Reflection.AssemblyProductAttribute("Olympus")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Olympus")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

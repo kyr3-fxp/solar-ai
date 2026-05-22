@@ -35,4 +35,8 @@ return [
         ],
     ],
 
+    'solar_api' => [
+        'base_url' => env('SOLAR_API_BASE_URL', 'http://localhost:5016'),
+    ],
+
 ];

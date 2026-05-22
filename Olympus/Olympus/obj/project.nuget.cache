@@ -1,12 +1,12 @@
 {
   "version": 2,
-  "dgSpecHash": "WBNMr1dSZ48=",
+  "dgSpecHash": "eoxvZ9hYzRk=",
   "success": true,
-  "projectFilePath": "C:\\Users\\jupam\\OneDrive\\Escritorio\\Olympus\\solar-ai\\Olympus\\Olympus\\Olympus.csproj",
+  "projectFilePath": "C:\\Users\\Aprendiz\\Desktop\\Solar AI\\Solar-AI\\Olympus\\Olympus\\Olympus.csproj",
   "expectedPackageFiles": [
-    "C:\\Users\\jupam\\.nuget\\packages\\microsoft.aspnetcore.openapi\\9.0.8\\microsoft.aspnetcore.openapi.9.0.8.nupkg.sha512",
-    "C:\\Users\\jupam\\.nuget\\packages\\microsoft.openapi\\1.6.17\\microsoft.openapi.1.6.17.nupkg.sha512",
-    "C:\\Users\\jupam\\.nuget\\packages\\scalar.aspnetcore\\2.14.14\\scalar.aspnetcore.2.14.14.nupkg.sha512"
+    "C:\\Users\\Aprendiz\\.nuget\\packages\\microsoft.aspnetcore.openapi\\9.0.8\\microsoft.aspnetcore.openapi.9.0.8.nupkg.sha512",
+    "C:\\Users\\Aprendiz\\.nuget\\packages\\microsoft.openapi\\1.6.17\\microsoft.openapi.1.6.17.nupkg.sha512",
+    "C:\\Users\\Aprendiz\\.nuget\\packages\\scalar.aspnetcore\\2.14.14\\scalar.aspnetcore.2.14.14.nupkg.sha512"
   ],
   "logs": []
 }

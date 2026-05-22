@@ -1,23 +1,23 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\jupam\\OneDrive\\Escritorio\\Olympus\\solar-ai\\Olympus\\Olympus\\Olympus.csproj": {}
+    "C:\\Users\\Aprendiz\\Desktop\\Solar AI\\Solar-AI\\Olympus\\Olympus\\Olympus.csproj": {}
   },
   "projects": {
-    "C:\\Users\\jupam\\OneDrive\\Escritorio\\Olympus\\solar-ai\\Olympus\\Olympus\\Olympus.csproj": {
+    "C:\\Users\\Aprendiz\\Desktop\\Solar AI\\Solar-AI\\Olympus\\Olympus\\Olympus.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\jupam\\OneDrive\\Escritorio\\Olympus\\solar-ai\\Olympus\\Olympus\\Olympus.csproj",
+        "projectUniqueName": "C:\\Users\\Aprendiz\\Desktop\\Solar AI\\Solar-AI\\Olympus\\Olympus\\Olympus.csproj",
         "projectName": "Olympus",
-        "projectPath": "C:\\Users\\jupam\\OneDrive\\Escritorio\\Olympus\\solar-ai\\Olympus\\Olympus\\Olympus.csproj",
-        "packagesPath": "C:\\Users\\jupam\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\jupam\\OneDrive\\Escritorio\\Olympus\\solar-ai\\Olympus\\Olympus\\obj\\",
+        "projectPath": "C:\\Users\\Aprendiz\\Desktop\\Solar AI\\Solar-AI\\Olympus\\Olympus\\Olympus.csproj",
+        "packagesPath": "C:\\Users\\Aprendiz\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\Aprendiz\\Desktop\\Solar AI\\Solar-AI\\Olympus\\Olympus\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
         ],
         "configFilePaths": [
-          "C:\\Users\\jupam\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Users\\Aprendiz\\AppData\\Roaming\\NuGet\\NuGet.Config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
@@ -26,7 +26,6 @@
         ],
         "sources": {
           "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
-          "C:\\Program Files\\dotnet\\library-packs": {},
           "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
@@ -45,7 +44,7 @@
           "auditLevel": "low",
           "auditMode": "direct"
         },
-        "SdkAnalysisLevel": "10.0.200"
+        "SdkAnalysisLevel": "9.0.300"
       },
       "frameworks": {
         "net9.0": {
@@ -79,7 +78,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.204/PortableRuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.314/PortableRuntimeIdentifierGraph.json"
         }
       }
     }

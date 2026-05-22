@@ -10,7 +10,8 @@ if (dashboardRoot) {
         heroRadiation: document.querySelector('[data-bind="hero-radiation"]'),
         heroState: document.querySelector('[data-bind="hero-state"]'),
         heroTemp: document.querySelector('[data-bind="hero-temp"]'),
-        heroHumidity: document.querySelector('[data-bind="hero-humidity"]'),
+        heroWind: document.querySelector('[data-bind="hero-wind"]'),
+        radiationVsHistorical: document.querySelector('[data-bind="radiation-vs-historical"]'),
         solarIndex: document.querySelector('[data-bind="solar-index"]'),
         solarIndexLabel: document.querySelector('[data-bind="solar-index-label"]'),
         solarSummary: document.querySelector('[data-bind="solar-summary"]'),
@@ -21,12 +22,14 @@ if (dashboardRoot) {
         recommendationsList: document.querySelector('[data-bind="recommendations-list"]'),
         monitoredList: document.querySelector('[data-bind="monitored-list"]'),
         uvIndex: document.querySelector('[data-bind="uv-index"]'),
+        productionPct: document.querySelector('[data-bind="production-pct"]'),
         productionStatus: document.querySelector('[data-bind="production-status"]'),
         mapLegend: document.querySelector('[data-bind="map-legend"]'),
         mapInfo: document.querySelector('[data-bind="map-info"]'),
-        profileGreeting: document.querySelector('[data-bind="profile-greeting"]'),
+        profileGreeting: document.querySelector('[data-bind="profile-greeting"]'),       // null-safe (legacy)
+        profileGreetingSub: document.querySelector('[data-bind="profile-greeting-sub"]'),
         profileSelector: document.querySelector('[data-role="profile-selector"]'),
-        // Battery
+        // Battery (removed card, keep refs safe)
         batteryCharge: document.querySelector('[data-bind="battery-charge"]'),
         batteryAutonomy: document.querySelector('[data-bind="battery-autonomy"]'),
         batteryProgress: document.querySelector('[data-bind="battery-progress"]'),
@@ -43,20 +46,33 @@ if (dashboardRoot) {
         // History
         historySource: document.querySelector('[data-bind="history-source"]'),
         historyStats: document.querySelector('[data-bind="history-stats"]'),
+        // Optimal / peak hours
+        optimalHours: document.querySelector('[data-bind="optimal-hours"]'),
+        peakCostHours: document.querySelector('[data-bind="peak-cost-hours"]'),
+        // ROI
+        roiInvestment: document.querySelector('[data-bind="roi-investment"]'),
+        roiPayback: document.querySelector('[data-bind="roi-payback"]'),
+        roiLabel: document.querySelector('[data-bind="roi-label"]'),
+        aiReductionPct: document.querySelector('[data-bind="ai-reduction-pct"]'),
     };
 
     // ═══════════════════════════════════════════════════════
     // PROFILES — Perfiles de consumo para el pitch
     // ═══════════════════════════════════════════════════════
+    // Tarifa base (fallback). Cada perfil define la suya según tipo de usuario Air-e La Guajira.
+    // Comercial ~1050, Industrial ~850, Residencial estrato 3 ~780 COP/kWh
     const PROFILES = [
         {
             targetType: 'company',
             name: 'Hotel Majayura',
             companyType: 'hotel',
+            tariffCopKwh: 1050,           // Tarifa comercial Air-e La Guajira
             monthlyConsumptionKwh: 12000,
-            companySize: 18,
+            companySize: 18,              // empleados
+            operatingHoursPerDay: 24,     // hotel 24h
+            floorAreaM2: 1200,
             peakUsageHours: '18:00-22:00',
-            mainLoads: ['aire acondicionado', 'iluminación', 'refrigeración', 'lavandería', 'bombas de agua'],
+            mainLoads: ['aire acondicionado (30% consumo)', 'lavandería industrial (8%)', 'refrigeración cocina (12%)', 'iluminación (15%)', 'bombas de agua (5%)'],
             recommendations: {
                 reasoning: 'Radiación alta detectada. Se priorizó mover cargas pesadas al mediodía y gestionar A/C en horas pico.',
                 recommendations: [
@@ -68,15 +84,35 @@ if (dashboardRoot) {
                 totalSavingsCopMonth: 2475000,
                 alert: 'Concentra el consumo pesado en las horas de mayor radiación solar.',
             },
+            fallbackInsights: {
+                headline: 'Hotel Majayura · Plan de Eficiencia Energética',
+                executiveSummary: 'Con 12,000 kWh/mes a $1,050/kWh, Majayura destina ~$12.6M COP mensuales a electricidad. El A/C (30%) y la lavandería (8%) son las palancas clave: moverlas al mediodía solar puede ahorrar hasta $2.5M/mes sin inversión adicional.',
+                solarContext: 'Riohacha · 6.5 kWh/m²/día · Hotel 24h · Tarifa comercial Air-e $1,050/kWh',
+                insights: [
+                    { icon: '🧺', title: 'Lavandería en ventana solar', body: 'Mover el ciclo de lavado de sábanas y toallas al mediodía solar (10:00-14:00) puede ahorrarte $48,500 COP/día. El compresor aprovecha el valle tarifario y la radiación máxima.', impact: 'alto' },
+                    { icon: '❄️', title: 'Pre-enfriamiento antes del pico tarifario', body: 'Bajar el A/C a 21°C entre las 15:00-17:30 y subirlo a 24°C tras las 18:00 reduce el consumo en hora pico hasta un 20% sin afectar el confort de los huéspedes.', impact: 'alto' },
+                    { icon: '💡', title: 'Iluminación LED en áreas comunes', body: 'Con el 15% del consumo en iluminación, migrar a LED de 9W (vs 60W incandescente) recorta esa partida un 85%. Retorno de inversión en menos de 8 meses en operación 24h.', impact: 'medio' },
+                ],
+            },
+            fallbackAlerts: [
+                { type: 'critical', icon: '⚡', title: 'Pico tarifario en 2h — protege la lavandería', message: 'Entre 18:00-21:00 Air-e aplica tarifa máxima. Cada ciclo de lavadora industrial en ese rango cuesta ~$18,000 COP extra. Termina la lavandería antes de las 17:00.', action: 'Finalizar ciclos de lavado antes de las 17:00', timeWindow: '18:00 - 21:00' },
+                { type: 'warning', icon: '🌡️', title: 'Temperatura >34°C — A/C al límite', message: 'Con temperatura superior a 34°C el compresor trabaja un 25% más. Pre-enfría las habitaciones con huéspedes entre 12:00-16:00 cuando la tarifa es baja.', action: 'Pre-enfriar habitaciones entre 12:00-16:00', timeWindow: '12:00 - 16:00' },
+                { type: 'warning', icon: '☀️', title: 'Ventana solar óptima — activa lavandería y bombas', message: 'Las próximas horas tienen la máxima radiación del día en Riohacha. Momento ideal para cargas resistivas: lavandería, bombas de agua y cocina industrial.', action: 'Programar lavandería industrial y bombas ahora', timeWindow: '10:00 - 14:00' },
+                { type: 'info', icon: '🏨', title: 'ROI solar estimado: 2.8 años', message: 'Un sistema de 8 kWp cubriría el 40% del consumo del hotel. Con tarifa de $1,050/kWh y 6.5 kWh/m²/día en Riohacha, la inversión (~$28M COP) se recupera en 2.8 años.', action: 'Ver simulación completa en pestaña Simulador', timeWindow: 'Análisis permanente' },
+            ],
+            fallbackAlertsContext: 'Hotel Majayura · Riohacha · Tarifa comercial Air-e $1,050/kWh · Datos precargados',
         },
         {
             targetType: 'company',
             name: 'Hielera del Caribe',
             companyType: 'hielera',
+            tariffCopKwh: 850,            // Tarifa industrial media tensión
             monthlyConsumptionKwh: 28000,
-            companySize: 6,
-            peakUsageHours: '08:00-12:00',
-            mainLoads: ['compresores de refrigeración', 'cámaras frías', 'bombas de agua'],
+            companySize: 6,               // empleados
+            operatingHoursPerDay: 16,     // 05:00-21:00
+            floorAreaM2: 600,
+            peakUsageHours: '08:00-14:00',
+            mainLoads: ['compresores industriales (80% consumo)', 'cámaras frías 4 unidades (12%)', 'bombas de agua (5%)', 'iluminación (3%)'],
             recommendations: {
                 reasoning: 'Los compresores representan el 80% del consumo. Moverlos al pico solar genera el mayor impacto.',
                 recommendations: [
@@ -88,15 +124,35 @@ if (dashboardRoot) {
                 totalSavingsCopMonth: 5550000,
                 alert: 'Los compresores consumen más cuando la temperatura supera 34°C. Hoy se espera temperatura alta.',
             },
+            fallbackInsights: {
+                headline: 'Hielera del Caribe · Optimización de Compresores Industriales',
+                executiveSummary: 'Con 28,000 kWh/mes a $850/kWh, la Hielera invierte ~$23.8M COP mensuales en electricidad. El 80% corresponde a compresores — concentrar sus ciclos en la ventana solar (10:00-14:00) puede ahorrar hasta $5.5M/mes sin cambiar ningún equipo.',
+                solarContext: 'Riohacha · 6.5 kWh/m²/día · Industrial · Compresores 80% carga · Tarifa media tensión $850/kWh',
+                insights: [
+                    { icon: '🧊', title: 'Compresores al mediodía solar = máximo ahorro', body: 'Con temperatura >34°C el compresor trabaja 25% más. Correr los ciclos de congelación de 10:00-14:00 reduce el estrés térmico, aprovecha la menor tarifa y puede ahorrar hasta $125,000 COP/día.', impact: 'alto' },
+                    { icon: '🔧', title: 'Mantenimiento preventivo de serpentines', body: 'Serpentines con depósito de calcáreo o polvo aumentan el consumo del compresor hasta 15%. Una limpieza trimestral ahorra ~$42,000 COP/día — el retorno es inmediato y no requiere paro prolongado.', impact: 'alto' },
+                    { icon: '🚪', title: 'Control de aperturas en hora pico', body: 'Cada apertura de cámara fría entre 18:00-21:00 pierde 3-5 min de frío, forzando al compresor a recuperar en tarifa máxima. Limitar aperturas en ese rango ahorra ~$18,000 COP/día.', impact: 'medio' },
+                ],
+            },
+            fallbackAlerts: [
+                { type: 'critical', icon: '⚡', title: 'Pico tarifario — reduce compresores no esenciales', message: 'Entre 18:00-21:00 la tarifa sube al máximo. Con 80% del consumo en compresores, cada hora de operación en pico cuesta ~$113,000 COP extra vs el mediodía. Reduce ciclos al mínimo.', action: 'Bajar compresores al 40% de capacidad entre 18:00-21:00', timeWindow: '18:00 - 21:00' },
+                { type: 'critical', icon: '🌡️', title: 'Temperatura alta — compresores bajo estrés térmico', message: 'Con temperatura >34°C los compresores trabajan 25-30% más para mantener las cámaras frías. Pre-congelar antes del calor máximo reduce el trabajo en la franja más cara del día.', action: 'Pre-congelar cámaras entre 06:00-10:00 antes del calor', timeWindow: '06:00 - 10:00' },
+                { type: 'warning', icon: '☀️', title: 'Ventana solar óptima — concentra producción de hielo', message: 'Entre 10:00 y 14:00 es el momento más eficiente: menor tarifa, mayor radiación, temperatura todavía manejable. Activa producción máxima de hielo ahora.', action: 'Activar producción máxima de hielo en ventana solar', timeWindow: '10:00 - 14:00' },
+                { type: 'info', icon: '📊', title: 'Sistema solar reduciría factura un 45%', message: 'Con 20 kWp instalados, la Hielera cubriría ~45% del consumo en horas de producción máxima. La inversión (~$70M COP) se recupera en 3.5 años con la tarifa industrial de $850/kWh.', action: 'Ver simulación detallada en pestaña Simulador', timeWindow: 'Análisis permanente' },
+            ],
+            fallbackAlertsContext: 'Hielera del Caribe · Riohacha · Compresores industriales · Tarifa media tensión $850/kWh · Datos precargados',
         },
         {
             targetType: 'company',
             name: 'Restaurante Sazón Guajira',
             companyType: 'restaurante',
+            tariffCopKwh: 1050,           // Tarifa comercial Air-e La Guajira
             monthlyConsumptionKwh: 8500,
-            companySize: 40,
+            companySize: 40,              // clientes/día (capacidad)
+            operatingHoursPerDay: 13,     // 09:00-22:00
+            floorAreaM2: 280,
             peakUsageHours: '11:00-15:00',
-            mainLoads: ['cocina industrial', 'refrigeración', 'aire acondicionado', 'iluminación'],
+            mainLoads: ['cocina industrial plancha/freidora (40% consumo)', 'refrigeración (25%)', 'aire acondicionado (20%)', 'iluminación (15%)'],
             recommendations: {
                 reasoning: 'La cocina industrial y refrigeración dominan el consumo. Se priorizó desplazar cocción fuera del pico tarifario.',
                 recommendations: [
@@ -108,10 +164,28 @@ if (dashboardRoot) {
                 totalSavingsCopMonth: 1455000,
                 alert: 'La temperatura hoy supera 34°C. El A/C consumirá más — prioriza ventilación cruzada.',
             },
+            fallbackInsights: {
+                headline: 'Sazón Guajira · Eficiencia en Cocina Industrial',
+                executiveSummary: 'Con 8,500 kWh/mes a $1,050/kWh, el restaurante gasta ~$8.9M COP mensuales en electricidad. La cocina industrial (40%) y refrigeración (25%) dominan el consumo. Adelantar la preparación al mediodía solar puede ahorrar hasta $1.4M/mes.',
+                solarContext: 'Riohacha · 6.5 kWh/m²/día · Restaurante 09:00-22:00 · Tarifa comercial Air-e $1,050/kWh',
+                insights: [
+                    { icon: '🍳', title: 'Mise en place al mediodía — cocina antes del pico', body: 'Adelantar fondos, bases y preparaciones largas a las 09:00-12:00 evita tener la plancha y freidora encendidas entre 18:00-22:00, cuando la tarifa es máxima. Ahorro potencial: $28,000 COP/día.', impact: 'alto' },
+                    { icon: '🧊', title: 'Pre-enfriar neveras antes del cierre', body: 'Bajar la temperatura de neveras 2°C antes del cierre (21:00) permite reducir ciclos del compresor durante las primeras horas de la noche, ahorrando ~$12,000 COP/día sin riesgo de cadena de frío.', impact: 'medio' },
+                    { icon: '❄️', title: 'A/C solo en horario de servicio activo', body: 'El A/C en reposo pre-apertura y post-cierre representa hasta el 20% del consumo de climatización. Encenderlo 30 min antes de abrir y apagarlo al cerrar ahorra ~$8,500 COP/día.', impact: 'medio' },
+                ],
+            },
+            fallbackAlerts: [
+                { type: 'critical', icon: '⚡', title: 'Pico tarifario — minimiza cocina pesada', message: 'Entre 18:00-21:00 la tarifa Air-e es máxima. Tener plancha, freidoras y horno encendidos cuesta un 35% más que al mediodía. Usa solo los quemadores esenciales para el servicio nocturno.', action: 'Terminar cocción de bases antes de las 17:30', timeWindow: '18:00 - 21:00' },
+                { type: 'warning', icon: '🌡️', title: 'Calor extremo — A/C y cocina en conflicto', message: 'Con temperatura >34°C y cocina industrial activa, el A/C lucha contra dos fuentes de calor simultáneas. Activa ventilación cruzada y enciende el A/C con anticipación para reducir la carga.', action: 'Activar A/C y ventilación cruzada antes del servicio', timeWindow: '10:30 - 11:30' },
+                { type: 'warning', icon: '☀️', title: 'Ventana solar — prepara mise en place ahora', message: 'Las próximas horas son las más baratas del día en tarifa eléctrica. Momento ideal para toda la cocción larga: fondos, salsas, horneados y frituras anticipadas.', action: 'Encender cocina industrial para preparación del día', timeWindow: '09:00 - 13:00' },
+                { type: 'info', icon: '☀️', title: 'Panel solar para refrigeración autónoma', message: 'Con 6 kWp instalados, el restaurante cubriría toda la carga de refrigeración en horas solares. Inversión ~$21M COP con payback estimado de 2.5 años a tarifa comercial de $1,050/kWh.', action: 'Calcular sistema en pestaña Simulador', timeWindow: 'Análisis permanente' },
+            ],
+            fallbackAlertsContext: 'Sazón Guajira · Riohacha · Cocina industrial · Tarifa comercial Air-e $1,050/kWh · Datos precargados',
         },
         {
             targetType: 'community',
             name: 'Riohacha',
+            tariffCopKwh: 780,            // Tarifa residencial estrato 3 promedio Air-e
             populationEstimate: 246000,
             mainProblems: [
                 'altos costos eléctricos',
@@ -131,10 +205,28 @@ if (dashboardRoot) {
                 totalSavingsCopMonth: 40500000,
                 alert: 'Con la radiación actual, Riohacha podría cubrir el 60% de su demanda con energía solar.',
             },
+            fallbackInsights: {
+                headline: 'Riohacha · Capital Solar de Colombia',
+                executiveSummary: 'Con 246,000 habitantes y 6.5+ kWh/m²/día de radiación, Riohacha tiene el mayor potencial solar de Colombia. Una adopción masiva entre PYMES podría reducir la factura eléctrica colectiva en más de $40M COP/día y disminuir la dependencia de la red de Air-e.',
+                solarContext: 'Riohacha, La Guajira · 6.5-7.0 kWh/m²/día · 246,000 hab · Mayor potencial solar de Colombia',
+                insights: [
+                    { icon: '☀️', title: 'Mayor irradiación solar de Colombia', body: 'Riohacha recibe 6.5-7.0 kWh/m²/día — 40% más que Bogotá y 25% más que Medellín. Los paneles solares tienen aquí el mejor retorno de inversión del país: en promedio, 2.5-3 años.', impact: 'alto' },
+                    { icon: '🏙️', title: 'PYMES: potencial de ahorro colectivo $40M/día', body: 'Si el 20% de las PYMES de Riohacha adoptaran sistemas solares de 5 kWp, el ahorro colectivo superaría los $40M COP/día — equivalente a abastecer 8,000 hogares con energía solar gratuita.', impact: 'alto' },
+                    { icon: '⚡', title: 'Gestión de demanda reduce apagones', body: 'Los apagones en La Guajira ocurren principalmente entre 18:00-21:00 cuando la demanda supera la red. Si el 30% de los consumidores desplazara cargas al mediodía solar, los cortes se reducirían un 60%.', impact: 'medio' },
+                ],
+            },
+            fallbackAlerts: [
+                { type: 'critical', icon: '⚡', title: 'Pico de demanda urbana — riesgo de cortes', message: 'Entre 18:00-21:00 Riohacha alcanza su máxima demanda. En esta franja la probabilidad de cortes por sobrecarga de la red de Air-e es más alta. Recomendado: adelantar cargas al mediodía.', action: 'Comunicar a comercios: cargas pesadas antes de las 17:00', timeWindow: '18:00 - 21:00' },
+                { type: 'warning', icon: '🌡️', title: 'Temperatura extrema — consumo urbano elevado', message: 'Con temperatura >34°C el consumo colectivo de A/C en Riohacha aumenta ~18%, presionando la red de Air-e. Ventilación cruzada y pre-enfriamiento solar mitigan el pico de demanda.', action: 'Promover pre-enfriamiento entre 10:00-16:00 por redes', timeWindow: '14:00 - 20:00' },
+                { type: 'warning', icon: '☀️', title: 'Ventana solar óptima activa en toda La Guajira', message: 'La radiación actual en Riohacha es máxima. Esta es la franja donde los paneles generan su pico de producción y donde mover cargas equivale a energía solar gratuita para miles de hogares.', action: 'Activar campaña: concentrar consumo ahora en redes', timeWindow: '10:00 - 14:00' },
+                { type: 'info', icon: '📊', title: 'Riohacha puede liderar la transición solar del Caribe', message: 'Con el mayor índice de radiación de Colombia, 6.5+ kWh/m²/día y costos de instalación bajando año a año, Riohacha tiene las condiciones únicas para liderar la transición energética solar en el Caribe colombiano.', action: 'Ver potencial en pestaña Simulador', timeWindow: 'Visión estratégica' },
+            ],
+            fallbackAlertsContext: 'Riohacha, La Guajira · 246,000 hab · Mayor potencial solar de Colombia · Tarifa residencial $780/kWh · Datos precargados',
         },
     ];
-
     let activeProfileIndex = 0;
+    // Cache de recomendaciones por perfil — se llena en la primera visita y no vuelve a llamar a la IA
+    const recommendationsCache = {};
 
     const getActiveProfile = () => PROFILES[activeProfileIndex];
 
@@ -151,6 +243,15 @@ if (dashboardRoot) {
 
     const formatCOP = (value) => `$${moneyFmt.format(Math.round(value || 0))}`;
     const formatNumber = (value, digits = 1) => Number(value || 0).toFixed(digits);
+
+    // Tarifa eléctrica Riohacha (COP/kWh) — fuente: AGENTE-SOLAR-MAESTRO.md
+    const TARIFF_COP_KWH = 943;
+
+    const isServiceUnavailable = (error) => {
+        const msg = (error?.message || '').toLowerCase();
+        return msg.includes('503') || msg.includes('429') || msg.includes('no disponible')
+            || msg.includes('quota') || msg.includes('rate') || msg.includes('servicio');
+    };
 
     const isLightTheme = () => document.documentElement.getAttribute('data-theme') === 'light';
     const chartTextColor = () => isLightTheme() ? 'rgba(30,41,59,0.6)' : 'rgba(255,255,255,0.35)';
@@ -269,33 +370,78 @@ if (dashboardRoot) {
     };
 
     /* ── Hourly ── */
+    const renderHourlyItems = (hourSlots) => {
+        const items = hourSlots.map(({ label, value }) => `
+            <div class="flex flex-col items-center gap-3">
+                <div class="text-xs uppercase tracking-[0.28em] text-white/45">${label}</div>
+                <div class="text-white/80">${icon('sun')}</div>
+                <div class="mt-1 text-sm font-semibold text-white">${value}</div>
+                <div class="h-16 w-3 rounded-full bg-white/8 p-[2px]">
+                    <div class="h-full w-full rounded-full solar-gradient" style="transform: scaleY(${Math.max(0.2, Math.min(value / 7, 1))}); transform-origin: bottom;"></div>
+                </div>
+            </div>
+        `);
+        setHTML(elements.hourlyList, items.join(''));
+    };
+
     const renderHourly = (today) => {
         if (!elements.hourlyList || !today) return;
 
-        const hours = [10, 11, 12, 13, 14];
+        // Usar datos horarios reales que vienen incluidos en /api/solar/today
+        const hourlyReal = today.hourlyRadiation;
+        if (Array.isArray(hourlyReal) && hourlyReal.length > 0) {
+            // Filtrar horas con radiación > 0 y tomar las 5 horas pico (mayor W/m²)
+            const withSun = hourlyReal.filter(h => h.radiationWm2 > 10);
+            if (withSun.length >= 3) {
+                const top5 = withSun
+                    .sort((a, b) => b.radiationWm2 - a.radiationWm2)
+                    .slice(0, 5)
+                    .sort((a, b) => a.hour - b.hour); // volver a orden cronológico
+
+                renderHourlyItems(top5.map(h => ({
+                    label: String(h.hour).padStart(2, '0'),
+                    value: parseFloat((h.radiationWm2 / 1000).toFixed(2)), // W/m² → kWh/m²
+                })));
+                return;
+            }
+        }
+
+        // Fallback sintético solo si la API no devuelve datos horarios
         const base = today.radiationKwhM2;
-        const values = [base - 1.1, base - 0.6, base, base - 0.2, base - 0.8].map((v) => Math.max(0, v));
+        const slots = [
+            { label: '10', value: Math.max(0, base - 1.1) },
+            { label: '11', value: Math.max(0, base - 0.6) },
+            { label: '12', value: base },
+            { label: '13', value: Math.max(0, base - 0.2) },
+            { label: '14', value: Math.max(0, base - 0.8) },
+        ].map(s => ({ label: s.label, value: parseFloat(s.value.toFixed(2)) }));
 
-        const items = hours.map((hour, index) => {
-            const value = values[index].toFixed(1);
-            return `
-                <div class="flex flex-col items-center gap-3">
-                    <div class="text-xs uppercase tracking-[0.28em] text-white/45">${hour}</div>
-                    <div class="text-white/80">${icon('sun')}</div>
-                    <div class="mt-1 text-sm font-semibold text-white">${value}</div>
-                    <div class="h-16 w-3 rounded-full bg-white/8 p-[2px]">
-                        <div class="h-full w-full rounded-full solar-gradient" style="transform: scaleY(${Math.max(0.2, Math.min(value / 7, 1))}); transform-origin: bottom;"></div>
-                    </div>
-                </div>
-            `;
-        });
-
-        setHTML(elements.hourlyList, items.join(''));
+        renderHourlyItems(slots);
     };
 
     /* ── Recommendations ── */
     const renderRecommendations = (payload) => {
         if (!elements.recommendationsList || !payload) return;
+
+        const reasoningEl = document.querySelector('[data-bind="ai-reasoning"]');
+        if (reasoningEl) {
+            if (payload.reasoning) {
+                reasoningEl.textContent = payload.reasoning;
+                reasoningEl.classList.remove('hidden');
+            } else {
+                reasoningEl.classList.add('hidden');
+            }
+        }
+
+        const alertEl = document.querySelector('[data-bind="ai-alert"]');
+        if (alertEl) {
+            if (payload.alert) {
+                alertEl.textContent = `⚠ ${payload.alert}`;
+                alertEl.classList.remove('hidden');
+            } else {
+                alertEl.classList.add('hidden');
+            }
+        }
 
         const cards = payload.recommendations
             .map((item, index) => {
@@ -329,51 +475,22 @@ if (dashboardRoot) {
         setHTML(elements.recommendationsList, cards);
         document.querySelectorAll('[data-bind="savings-daily"]').forEach(el => el.textContent = formatCOP(payload.totalSavingsCopDay));
         document.querySelectorAll('[data-bind="savings-monthly"]').forEach(el => el.textContent = formatCOP(payload.totalSavingsCopMonth));
-    };
 
-    /* ── Monitored Companies ── */
-    const renderMonitoredCities = () => {
-        if (!elements.monitoredList) return;
-
-        setHTML(
-            elements.monitoredList,
-            PROFILES
-                .map(
-                    (profile, index) => {
-                        const isActive = index === activeProfileIndex;
-                        const activeClass = isActive
-                            ? 'border-emerald-400/30 bg-emerald-400/5 translate-x-1'
-                            : '';
-                        const label = profile.targetType === 'community'
-                            ? `${profile.name} (Comunidad)`
-                            : profile.name;
-                        const badge = isActive
-                            ? '<span class="ml-auto h-2 w-2 rounded-full bg-emerald-400"></span>'
-                            : '';
-
-                        return `
-                            <button
-                                class="glass-card w-full px-4 py-3 text-left text-sm text-white/88 transition hover:translate-x-1 hover:border-white/16 flex items-center ${activeClass}"
-                                data-profile-index="${index}"
-                            >
-                                <span>${index + 1}. ${label}</span>
-                                ${badge}
-                            </button>
-                        `;
-                    },
-                )
-                .join(''),
-        );
-
-        // Click on monitored company switches profile
-        elements.monitoredList.querySelectorAll('[data-profile-index]').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const idx = parseInt(btn.dataset.profileIndex, 10);
-                if (elements.profileSelector) elements.profileSelector.value = String(idx);
-                switchProfile(idx);
-            });
+        // Ahorro Potencial (tarjeta Consumo Energético General)
+        const profile = getActiveProfile();
+        const tariff = profile.tariffCopKwh || TARIFF_COP_KWH;
+        const dailyKwh = Math.round((profile.monthlyConsumptionKwh || 5400) / 30);
+        const savingsPct = (payload.totalSavingsCopDay / (dailyKwh * tariff)) * 100;
+        document.querySelectorAll('[data-bind="consumption-savings-pct"]').forEach(el => {
+            el.textContent = `-${Math.min(savingsPct, 99).toFixed(1)}%`;
         });
+
+        // Reducción IA — tarjeta ROI
+        if (elements.aiReductionPct) {
+            elements.aiReductionPct.textContent = `-${Math.min(savingsPct, 99).toFixed(1)}%`;
+        }
     };
+
 
     /* ── Map Card (Leaflet) ── */
     let solarMap = null;
@@ -451,81 +568,74 @@ if (dashboardRoot) {
         L.control.zoom({ position: 'topright' }).addTo(solarMap);
     };
 
-    /* ── Battery ── */
-    const renderBattery = (history, today) => {
-        if (!elements.batteryCharge) return;
 
-        let charge = 74;
-        let cycles = 312;
-        let health = '92%';
-        let autonomy = '3.5 h';
-
-        if (history?.battery) {
-            charge = Math.round(history.battery.charge ?? history.battery.level ?? charge);
-            cycles = history.battery.cycles ?? cycles;
-            health = history.battery.health ?? health;
-            autonomy = history.battery.autonomyHours ?? autonomy;
-        } else if (today?.battery) {
-            charge = Math.round(today.battery.charge ?? today.battery.level ?? charge);
-            cycles = today.battery.cycles ?? cycles;
-            health = today.battery.health ?? health;
-            autonomy = today.battery.autonomyHours ?? autonomy;
-        }
-
-        const chargePct = Math.max(0, Math.min(charge, 100));
-
-        setText(elements.batteryCharge, `${chargePct}%`);
-        setText(elements.batteryAutonomy, autonomy);
-        setText(elements.batteryCycles, cycles);
-        setText(elements.batteryHealth, health);
-
-        if (elements.batteryProgress) {
-            elements.batteryProgress.style.width = `${chargePct}%`;
-        }
-    };
-
-    /* ── Consumption ── */
-    const renderConsumption = (history, today) => {
+    /* ── Consumption ──
+       Deriva del consumo mensual del perfil activo.
+       Tarifa: diferenciada por tipo de usuario (comercial/industrial/residencial).
+       Consumo Hoy: ajustado por índice solar real (mayor sol = menos consumo de red).
+       Base del Perfil: consumo sin generación solar (línea base). */
+    const renderConsumption = (today) => {
         if (!elements.currentConsumption) return;
 
-        let kwhToday = 194;
-        let avgDaily = 180;
-        let diff = -7.8;
-        let costDay = formatCOP(182642);
-        let maxKwh = 250;
+        const profile = getActiveProfile();
+        const tariff = profile.tariffCopKwh || TARIFF_COP_KWH;
+        const baseKwh = Math.round((profile.monthlyConsumptionKwh || 5400) / 30);
+        const maxKwh = Math.round(baseKwh * 1.3);
 
-        if (history?.consumption) {
-            const c = history.consumption;
-            kwhToday = c.todayKwh ?? kwhToday;
-            avgDaily = c.avgDailyKwh ?? avgDaily;
-            diff = c.diffPercentVsYesterday ?? diff;
-            costDay = c.costCopToday ? formatCOP(c.costCopToday) : costDay;
-            maxKwh = c.maxKwh ?? maxKwh;
-        } else if (today?.consumption) {
-            const c = today.consumption;
-            kwhToday = c.todayKwh ?? kwhToday;
-            avgDaily = c.avgDailyKwh ?? avgDaily;
-            diff = c.diffPercentVsYesterday ?? diff;
-            costDay = c.costCopToday ? formatCOP(c.costCopToday) : costDay;
-            maxKwh = c.maxKwh ?? maxKwh;
-        }
+        // Consumo Hoy: el índice solar reduce el consumo de red (autogeneración solar)
+        // Máx 15% de reducción en día perfecto (índice 100). Fórmula basada en curva solar Riohacha.
+        const solarIdx = today?.solarIndex ?? 50;
+        const solarReduction = Math.round(baseKwh * (solarIdx / 100) * 0.15);
+        const todayKwh = baseKwh - solarReduction;
+        const diffPct = -parseFloat(((solarReduction / baseKwh) * 100).toFixed(1));
 
-        setText(elements.currentConsumption, `${kwhToday} kWh`);
+        const costDay = formatCOP(todayKwh * tariff);
+
+        setText(elements.currentConsumption, `${todayKwh} kWh`);
         setText(elements.consumptionCost, costDay);
-        setText(elements.consumptionToday, kwhToday.toLocaleString('es-CO'));
-        setText(elements.consumptionAvg, avgDaily.toLocaleString('es-CO'));
-        setText(elements.consumptionDiff, `${diff >= 0 ? '+' : ''}${formatNumber(diff, 1)}%`);
+        setText(elements.consumptionToday, todayKwh.toLocaleString('es-CO'));
+        setText(elements.consumptionAvg, baseKwh.toLocaleString('es-CO'));
+        setText(elements.consumptionDiff, `${diffPct >= 0 ? '+' : ''}${formatNumber(diffPct, 1)}%`);
 
         if (elements.consumptionProgress) {
-            elements.consumptionProgress.style.width = `${Math.min(100, (kwhToday / maxKwh) * 100)}%`;
+            elements.consumptionProgress.style.width = `${Math.min(100, (todayKwh / maxKwh) * 100)}%`;
         }
 
-        // Change cost label depending on current rate period
         const hour = new Date().getHours();
         const isPeak = hour >= 18 && hour <= 21;
-        setText(elements.consumptionCostLabel, isPeak ? 'Costo hora pico' : 'Costo actual');
+        setText(elements.consumptionCostLabel, isPeak
+            ? `Costo hora pico · $${tariff}/kWh`
+            : `Costo est. / día · $${tariff}/kWh`);
 
-        return { kwhToday, avgDaily, diff, maxKwh };
+        return { baseKwh, todayKwh, maxKwh, tariff };
+    };
+
+    /* ── ROI Solar ──
+       Calcula el retorno de inversión en paneles solares para el perfil activo.
+       Parámetros Riohacha: 5 horas sol pico/día, $3.5M COP/kWp instalado. */
+    const renderROI = (profile, tariff) => {
+        if (!elements.roiInvestment) return;
+
+        const baseKwh = (profile.monthlyConsumptionKwh || 5400) / 30;
+        const coveragePct = 0.40;           // Cubrir 40% del consumo con paneles
+        const peakSunHours = 5.0;           // Horas sol pico Riohacha (hsp)
+        const costPerKwp = 3_500_000;       // COP/kWp instalado (promedio Colombia 2025)
+        const systemEfficiency = 0.80;      // Pérdidas: inversor, temperatura, cables
+
+        const kWpNeeded = (baseKwh * coveragePct) / (peakSunHours * systemEfficiency);
+        const investment = Math.round(kWpNeeded * costPerKwp);
+        const annualGenKwh = kWpNeeded * peakSunHours * systemEfficiency * 365;
+        const annualSavings = annualGenKwh * tariff;
+        const paybackYears = parseFloat((investment / annualSavings).toFixed(1));
+
+        const investFmt = investment >= 1_000_000
+            ? `$${(investment / 1_000_000).toFixed(1)}M`
+            : formatCOP(investment);
+
+        setText(elements.roiInvestment, investFmt);
+        setText(elements.roiPayback, `${paybackYears} años`);
+        setText(elements.roiLabel,
+            `${kWpNeeded.toFixed(1)} kWp · Genera ${Math.round(annualGenKwh).toLocaleString('es-CO')} kWh/año · Ahorro: ${formatCOP(annualSavings)}/año`);
     };
 
     /* ── History Chart ── */
@@ -545,13 +655,15 @@ if (dashboardRoot) {
 
             state.history = history;
             const daily = history.daily || [];
+            const monthly = history.monthly || [];
+            const useMonthly = days >= 180 && monthly.length > 0;
 
-            // Stats row
-            if (elements.historyStats && daily.length) {
-                const radValues = daily.map(d => d.radiationKwhM2);
-                const avg = radValues.reduce((a, b) => a + b, 0) / radValues.length;
-                const max = Math.max(...radValues);
-                const min = Math.min(...radValues);
+            // Stats row — prefer API-level aggregates, fall back to computing from arrays
+            if (elements.historyStats) {
+                const source = useMonthly ? monthly.map(m => m.averageRadiation) : daily.map(d => d.radiationKwhM2);
+                const avg = history.averageRadiation ?? (source.length ? source.reduce((a, b) => a + b, 0) / source.length : 0);
+                const max = history.maxRadiation ?? (source.length ? Math.max(...source) : 0);
+                const min = history.minRadiation ?? (source.length ? Math.min(...source) : 0);
                 setHTML(elements.historyStats, `
                     <div class="panel-surface rounded-xl p-3">
                         <div class="text-[10px] uppercase tracking-wider text-white/35">Promedio</div>
@@ -568,9 +680,9 @@ if (dashboardRoot) {
                 `);
             }
 
-            setText(elements.historySource, `Fuente: ${history.source || 'NASA / Open-Meteo'} · ${daily.length} días`);
+            const datasetSize = useMonthly ? monthly.length : daily.length;
+            setText(elements.historySource, `Fuente: ${history.source || 'NASA / Open-Meteo'} · ${useMonthly ? `${datasetSize} meses` : `${datasetSize} días`}`);
 
-            // Chart.js
             await loadScript('https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js');
 
             const canvas = document.getElementById('solarHistoryChart');
@@ -578,32 +690,41 @@ if (dashboardRoot) {
 
             if (historyChart) historyChart.destroy();
 
-            const labels = daily.map(d => {
-                const date = new Date(d.date);
-                return `${date.getDate()}/${date.getMonth() + 1}`;
-            });
-            const values = daily.map(d => d.radiationKwhM2);
-
             const ctx = canvas.getContext('2d');
             const gradient = ctx.createLinearGradient(0, 0, 0, 240);
             gradient.addColorStop(0, 'rgba(56, 189, 248, 0.35)');
             gradient.addColorStop(1, 'rgba(56, 189, 248, 0.0)');
 
+            let chartLabels, chartValues, chartType;
+            if (useMonthly) {
+                chartLabels = monthly.map(m => m.monthName ? m.monthName.slice(0, 3) : `${m.year}/${m.month}`);
+                chartValues = monthly.map(m => m.averageRadiation);
+                chartType = 'bar';
+            } else {
+                chartLabels = daily.map(d => {
+                    const date = new Date(d.date);
+                    return `${date.getDate()}/${date.getMonth() + 1}`;
+                });
+                chartValues = daily.map(d => d.radiationKwhM2);
+                chartType = 'line';
+            }
+
             historyChart = new Chart(ctx, {
-                type: 'line',
+                type: chartType,
                 data: {
-                    labels,
+                    labels: chartLabels,
                     datasets: [{
                         label: 'Radiación kWh/m²',
-                        data: values,
+                        data: chartValues,
                         borderColor: 'rgba(56, 189, 248, 0.85)',
-                        backgroundColor: gradient,
-                        fill: true,
-                        tension: 0.35,
-                        pointRadius: 2,
+                        backgroundColor: chartType === 'bar' ? 'rgba(56, 189, 248, 0.4)' : gradient,
+                        fill: chartType === 'line',
+                        tension: chartType === 'line' ? 0.35 : 0,
+                        pointRadius: chartType === 'line' ? 2 : 0,
                         pointHoverRadius: 5,
                         pointBackgroundColor: '#38bdf8',
-                        borderWidth: 2,
+                        borderWidth: chartType === 'line' ? 2 : 0,
+                        borderRadius: chartType === 'bar' ? 5 : 0,
                     }],
                 },
                 options: {
@@ -642,7 +763,7 @@ if (dashboardRoot) {
     /* ── Consumption Chart ── */
     let consumptionChart = null;
 
-    const renderConsumptionChart = async () => {
+    const renderConsumptionChart = async (today) => {
         const canvas = document.getElementById('consumptionChart');
         if (!canvas) return;
 
@@ -652,8 +773,26 @@ if (dashboardRoot) {
             if (consumptionChart) consumptionChart.destroy();
 
             const labels = ['00:00', '04:00', '08:00', '12:00', '16:00', '20:00', '23:59'];
-            const production = [0, 0, 1.2, 5.8, 6.6, 2.1, 0];
-            const consumptionValues = [14, 9, 20, 22, 21, 25, 18];
+
+            // Producción solar: basada en radiación real del día (kWh/m²)
+            // Distribución horaria típica de curva solar
+            const radiation = today?.radiationKwhM2 ?? 6.5;
+            const solarFactors = [0, 0, 0.07, 0.42, 0.34, 0.14, 0.03];
+            const production = solarFactors.map(f => parseFloat((f * radiation * 0.9).toFixed(2)));
+
+            // Consumo: derivado del perfil activo, su patrón operativo y ajuste solar
+            const profile = getActiveProfile();
+            const baseKwhDay = (profile.monthlyConsumptionKwh || 5400) / 30;
+            const solarIdxNow = today?.solarIndex ?? 50;
+            const solarReductionFactor = 1 - (solarIdxNow / 100) * 0.15;
+            const dailyKwh = baseKwhDay * solarReductionFactor;
+            const patterns = {
+                hotel:      [0.08, 0.05, 0.12, 0.15, 0.18, 0.27, 0.15],
+                hielera:    [0.10, 0.07, 0.18, 0.22, 0.20, 0.14, 0.09],
+                restaurante:[0.05, 0.03, 0.10, 0.25, 0.14, 0.31, 0.12],
+            };
+            const pattern = patterns[profile.companyType] || [0.12, 0.06, 0.14, 0.12, 0.15, 0.29, 0.12];
+            const consumptionValues = pattern.map(f => parseFloat((f * dailyKwh).toFixed(1)));
 
             const ctx = canvas.getContext('2d');
             const prodGradient = ctx.createLinearGradient(0, 0, 0, 240);
@@ -738,6 +877,400 @@ if (dashboardRoot) {
         }
     };
 
+    /* ── Consumption Chart — by period ── */
+    const renderConsumptionChartForPeriod = async (period, today) => {
+        const canvas = document.getElementById('consumptionChart');
+        if (!canvas) return;
+
+        try {
+            await loadScript('https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js');
+            if (consumptionChart) consumptionChart.destroy();
+
+            const profile = getActiveProfile();
+            const baseKwhDay = (profile.monthlyConsumptionKwh || 5400) / 30;
+            const solarIdx = today?.solarIndex ?? 50;
+            const solarFactor = 1 - (solarIdx / 100) * 0.15;
+            const tariff = profile.tariffCopKwh || 1050;
+
+            let labels, consumptionData, productionData, chartType = 'bar';
+
+            if (period === 'day') {
+                labels = ['00:00', '04:00', '08:00', '12:00', '16:00', '20:00', '23:59'];
+                const patterns = {
+                    hotel:      [0.08, 0.05, 0.12, 0.15, 0.18, 0.27, 0.15],
+                    hielera:    [0.10, 0.07, 0.18, 0.22, 0.20, 0.14, 0.09],
+                    restaurante:[0.05, 0.03, 0.10, 0.25, 0.14, 0.31, 0.12],
+                };
+                const pattern = patterns[profile.companyType] || [0.12, 0.06, 0.14, 0.12, 0.15, 0.29, 0.12];
+                consumptionData = pattern.map(f => parseFloat((f * baseKwhDay * solarFactor).toFixed(1)));
+                const radiation = today?.radiationKwhM2 ?? 6.5;
+                const sf = [0, 0, 0.07, 0.42, 0.34, 0.14, 0.03];
+                productionData = sf.map(f => parseFloat((f * radiation * 0.9).toFixed(2)));
+                chartType = 'bar';
+            } else if (period === 'week') {
+                const days = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+                labels = days;
+                // Simulate weekly variation with solar factors
+                const weeklyVariation = [0.97, 1.02, 0.98, 1.05, 1.01, 0.88, 0.82];
+                consumptionData = weeklyVariation.map(v => parseFloat((baseKwhDay * solarFactor * v).toFixed(1)));
+                productionData = weeklyVariation.map(v => parseFloat((baseKwhDay * 0.12 * v).toFixed(1)));
+                chartType = 'line';
+            } else { // month
+                labels = Array.from({length: 30}, (_, i) => `${i + 1}`);
+                consumptionData = labels.map(() => {
+                    const v = 0.85 + Math.random() * 0.3;
+                    return parseFloat((baseKwhDay * solarFactor * v).toFixed(1));
+                });
+                productionData = labels.map(() => parseFloat((baseKwhDay * 0.10 * (0.8 + Math.random() * 0.4)).toFixed(1)));
+                chartType = 'line';
+            }
+
+            const ctx = canvas.getContext('2d');
+            const prodGradient = ctx.createLinearGradient(0, 0, 0, 200);
+            prodGradient.addColorStop(0, 'rgba(34,197,94,0.3)');
+            prodGradient.addColorStop(1, 'rgba(34,197,94,0.0)');
+            const consGradient = ctx.createLinearGradient(0, 0, 0, 200);
+            consGradient.addColorStop(0, 'rgba(251,146,60,0.25)');
+            consGradient.addColorStop(1, 'rgba(251,146,60,0.0)');
+
+            consumptionChart = new Chart(ctx, {
+                type: chartType,
+                data: {
+                    labels,
+                    datasets: [
+                        {
+                            label: 'Producción Solar (kWh)',
+                            data: productionData,
+                            backgroundColor: prodGradient,
+                            borderColor: 'rgba(34,197,94,0.7)',
+                            borderWidth: 2,
+                            borderRadius: 4,
+                            type: 'line',
+                            tension: 0.4,
+                            fill: true,
+                            pointRadius: period === 'month' ? 1 : 3,
+                            yAxisID: 'y',
+                        },
+                        {
+                            label: 'Consumo (kWh)',
+                            data: consumptionData,
+                            backgroundColor: chartType === 'bar' ? consGradient : 'transparent',
+                            borderColor: 'rgba(251,146,60,0.6)',
+                            borderWidth: 2,
+                            borderRadius: 4,
+                            type: chartType,
+                            tension: 0.4,
+                            fill: chartType === 'line',
+                            pointRadius: period === 'month' ? 1 : 3,
+                            yAxisID: 'y1',
+                        },
+                    ],
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: {
+                        legend: { labels: { color: chartLegendColor(), boxWidth: 12, font: { size: 10 } } },
+                        tooltip: {
+                            backgroundColor: 'rgba(10,10,10,0.9)',
+                            titleColor: '#fff',
+                            bodyColor: 'rgba(255,255,255,0.7)',
+                            borderColor: 'rgba(255,255,255,0.1)',
+                            borderWidth: 1,
+                            cornerRadius: 8,
+                            padding: 10,
+                        },
+                    },
+                    scales: {
+                        x: { grid: { color: chartGridColor() }, ticks: { color: chartTextColor(), font: { size: 10 }, maxTicksLimit: 12 } },
+                        y: { position: 'left', grid: { color: chartGridColor() }, ticks: { color: 'rgba(34,197,94,0.7)', font: { size: 10 } }, title: { display: true, text: 'Solar', color: 'rgba(34,197,94,0.8)', font: { size: 10 } } },
+                        y1: { position: 'right', grid: { drawOnChartArea: false }, ticks: { color: 'rgba(251,146,60,0.7)', font: { size: 10 } }, title: { display: true, text: 'Consumo', color: 'rgba(251,146,60,0.8)', font: { size: 10 } } },
+                    },
+                },
+            });
+        } catch (e) { console.warn('Consumption chart period error:', e); }
+    };
+
+    /* ── History Chart Full (history view) ── */
+    let historyChartFull = null;
+    const renderHistoryFull = async (days) => {
+        const sourceEl = document.querySelector('[data-bind="history-source-full"]');
+        const statsEl  = document.querySelector('[data-bind="history-stats-full"]');
+        const canvas   = document.getElementById('solarHistoryChartFull');
+        if (!canvas) return;
+
+        try {
+            const NASA_DELAY = 8;
+            const toDate = new Date(); toDate.setDate(toDate.getDate() - NASA_DELAY);
+            const fromDate = new Date(toDate); fromDate.setDate(fromDate.getDate() - days);
+            const history = await fetchJson(`/api/solar/history?from=${fromDate.toISOString().split('T')[0]}&to=${toDate.toISOString().split('T')[0]}`);
+
+            const daily   = history.daily || [];
+            const monthly = history.monthly || [];
+            const useMon  = days >= 180 && monthly.length > 0;
+            const source  = useMon ? monthly.map(m=>m.averageRadiation) : daily.map(d=>d.radiationKwhM2);
+            const avg     = history.averageRadiation ?? (source.length ? source.reduce((a,b)=>a+b,0)/source.length : 0);
+            const max     = history.maxRadiation ?? (source.length ? Math.max(...source) : 0);
+            const min     = history.minRadiation ?? (source.length ? Math.min(...source) : 0);
+
+            if (sourceEl) sourceEl.textContent = `${history.source || 'NASA POWER'} · ${useMon ? `${monthly.length} meses` : `${daily.length} días`}`;
+            if (statsEl) statsEl.innerHTML = `
+                <div class="panel-surface rounded-xl p-3"><div class="text-[10px] uppercase tracking-wider text-white/35">Promedio</div><div class="mt-1 text-lg font-bold text-white">${avg.toFixed(2)} <span class="text-[10px] text-white/40">kWh/m²</span></div></div>
+                <div class="panel-surface rounded-xl p-3"><div class="text-[10px] uppercase tracking-wider text-white/35">Máxima</div><div class="mt-1 text-lg font-bold text-white">${max.toFixed(2)} <span class="text-[10px] text-white/40">kWh/m²</span></div></div>
+                <div class="panel-surface rounded-xl p-3"><div class="text-[10px] uppercase tracking-wider text-white/35">Mínima</div><div class="mt-1 text-lg font-bold text-white">${min.toFixed(2)} <span class="text-[10px] text-white/40">kWh/m²</span></div></div>
+            `;
+
+            await loadScript('https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js');
+            if (historyChartFull) historyChartFull.destroy();
+            const ctx = canvas.getContext('2d');
+            const grad = ctx.createLinearGradient(0,0,0,280);
+            grad.addColorStop(0,'rgba(56,189,248,0.4)'); grad.addColorStop(1,'rgba(56,189,248,0)');
+            const chartLabels = useMon ? monthly.map(m=>m.monthName?.slice(0,3)||`${m.year}/${m.month}`) : daily.map(d=>{const dt=new Date(d.date);return `${dt.getDate()}/${dt.getMonth()+1}`;});
+            const chartValues = useMon ? monthly.map(m=>m.averageRadiation) : daily.map(d=>d.radiationKwhM2);
+            const cType = useMon ? 'bar' : 'line';
+            historyChartFull = new Chart(ctx, {
+                type: cType,
+                data: { labels: chartLabels, datasets: [{ label: 'Radiación kWh/m²', data: chartValues, borderColor: 'rgba(56,189,248,0.85)', backgroundColor: cType==='bar'?'rgba(56,189,248,0.4)':grad, fill: cType==='line', tension: 0.35, pointRadius: 2, borderWidth: 2, borderRadius: 5 }] },
+                options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false},tooltip:{backgroundColor:'rgba(10,10,10,0.9)',titleColor:'#fff',bodyColor:'rgba(255,255,255,0.7)',borderColor:'rgba(255,255,255,0.1)',borderWidth:1,cornerRadius:8,padding:10}}, scales:{x:{grid:{color:chartGridColor()},ticks:{color:chartTextColor(),font:{size:10},maxRotation:0}},y:{grid:{color:chartGridColor()},ticks:{color:chartTextColor(),font:{size:10}}}}}
+            });
+        } catch(e) { if (sourceEl) sourceEl.textContent = 'No se pudieron cargar los datos históricos.'; }
+    };
+
+    /* ── Alerts Loader ── */
+    // Cache per-profile: { [profileIndex]: { alerts, context } }
+    const alertsCache = {};
+
+    const STATIC_ALERTS = [
+        { type: 'critical', icon: '⚡', title: 'Hora pico tarifaria en 2h', message: 'Entre las 18:00-21:00 la tarifa de Air-e sube hasta un 35%. Evita activar cargas pesadas en esa franja.', action: 'Programar cargas para antes de las 17:00', timeWindow: '18:00 - 21:00' },
+        { type: 'warning', icon: '🌡️', title: 'Temperatura alta esperada', message: 'Temperaturas superiores a 34°C aumentan el consumo del A/C hasta un 25%. Gestiona el pre-enfriamiento solar.', action: 'Pre-enfriar espacios entre 12:00-16:00', timeWindow: '14:00 - 18:00' },
+        { type: 'warning', icon: '☀️', title: 'Ventana solar óptima activa', message: 'Las próximas 4 horas tienen la máxima radiación del día en Riohacha. Concentra el consumo pesado ahora.', action: 'Activar compresores, lavandería y equipos industriales', timeWindow: '10:00 - 14:00' },
+        { type: 'info', icon: '📊', title: 'Potencial solar sin aprovechar', message: 'Riohacha recibe 6.5+ kWh/m² diarios. Sin paneles, el 100% de esa energía se pierde. Con 5 kWp el payback es menor a 3 años.', action: 'Ver simulación de ROI en la pestaña Simulador', timeWindow: 'Gestión continua' },
+    ];
+
+    const renderAlertsList = (alerts, context) => {
+        const list = document.querySelector('[data-bind="alerts-list"]');
+        if (!list) return;
+
+        const typeColors = {
+            critical: { text: 'text-red-300',    bg: 'text-red-400/70',  title: 'text-red-200' },
+            warning:  { text: 'text-yellow-200',  bg: 'text-yellow-400/70', title: 'text-yellow-100' },
+            info:     { text: 'text-sky-200',     bg: 'text-sky-400/70',  title: 'text-sky-100' },
+        };
+
+        list.innerHTML = alerts.map(a => {
+            const c = typeColors[a.type] || typeColors.info;
+            return `
+                <div class="alert-item ${a.type}">
+                    <div class="text-2xl shrink-0 mt-0.5">${a.icon}</div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <span class="text-sm font-semibold ${c.title}">${a.title}</span>
+                            <span class="text-[10px] uppercase tracking-wider ${c.bg}">${a.type === 'critical' ? 'Crítico' : a.type === 'warning' ? 'Advertencia' : 'Info'}</span>
+                            ${a.timeWindow ? `<span class="text-[10px] text-white/35">${a.timeWindow}</span>` : ''}
+                        </div>
+                        <p class="mt-1 text-sm leading-5 ${c.text}/80">${a.message}</p>
+                        ${a.action ? `<div class="mt-2 text-[11px] text-white/40">→ ${a.action}</div>` : ''}
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        const contextEl = document.querySelector('[data-bind="alerts-context"]');
+        if (contextEl && context) contextEl.textContent = context;
+
+        // Update alerts count badge
+        const criticalCount = alerts.filter(a => a.type === 'critical').length;
+        const countBadge = document.querySelector('[data-bind="alerts-count"]');
+        if (countBadge) {
+            if (criticalCount > 0) {
+                countBadge.textContent = criticalCount;
+                countBadge.style.display = 'flex';
+            } else {
+                countBadge.style.display = 'none';
+            }
+        }
+    };
+
+    const loadAlerts = async () => {
+        const idx = activeProfileIndex;
+        // Use cached data if available for this profile
+        if (alertsCache[idx]) {
+            renderAlertsList(alertsCache[idx].alerts, alertsCache[idx].context);
+            return;
+        }
+        const profile = getActiveProfile();
+        try {
+            const data = await fetchJson('/api/ai/alerts', {
+                method: 'POST',
+                body: JSON.stringify({
+                    targetType: profile.targetType,
+                    name: profile.name,
+                    companyType: profile.companyType || '',
+                    monthlyConsumptionKwh: profile.monthlyConsumptionKwh || 0,
+                    tariffCopKwh: profile.tariffCopKwh || 1050,
+                }),
+            });
+            alertsCache[idx] = { alerts: data.alerts, context: data.solarSummary };
+            renderAlertsList(data.alerts, data.solarSummary);
+        } catch {
+            // Fallback also cached to avoid re-calling on every visit
+            const fallback = {
+                alerts: profile.fallbackAlerts || STATIC_ALERTS,
+                context: profile.fallbackAlertsContext || 'Riohacha · Alertas basadas en datos solares del perfil activo',
+            };
+            alertsCache[idx] = fallback;
+            renderAlertsList(fallback.alerts, fallback.context);
+        }
+    };
+
+    /* Refresh alerts button — clears cache for current profile and reloads */
+    document.addEventListener('click', (e) => {
+        if (e.target.closest('[data-role="refresh-alerts"]')) {
+            delete alertsCache[activeProfileIndex];
+            const list = document.querySelector('[data-bind="alerts-list"]');
+            if (list) list.innerHTML = '<div class="text-sm text-white/40 py-4 text-center">Consultando agente IA...</div>';
+            loadAlerts();
+        }
+    });
+
+    /* ── AI Insights ── */
+    // Cache per-profile: { [profileIndex]: data }
+    const insightsCache = {};
+
+    const STATIC_INSIGHTS = [
+        { icon: '☀️', title: 'Máximo potencial solar de Colombia', body: 'Riohacha recibe hasta 7.0 kWh/m²/día — 40% más que el promedio nacional. El sol es el mayor activo energético de La Guajira.', impact: 'alto' },
+        { icon: '⚡', title: 'Ventana solar de mayor ahorro', body: 'Concentrar cargas pesadas entre 10:00 y 14:00 puede reducir la factura eléctrica hasta un 35% sin inversión en infraestructura.', impact: 'alto' },
+        { icon: '💰', title: 'ROI solar menor a 3 años', body: 'Con tarifas Air-e de 780-1050 COP/kWh y radiación de 6.5 kWh/m²/día, un sistema de 5 kWp se paga solo en 2.8 años en promedio.', impact: 'medio' },
+    ];
+
+    const renderInsights = (data) => {
+        const headline = document.querySelector('[data-bind="insights-headline"]');
+        const summary  = document.querySelector('[data-bind="insights-summary"]');
+        const context  = document.querySelector('[data-bind="insights-solar-context"]');
+        const timeEl   = document.querySelector('[data-bind="insights-time"]');
+        const grid     = document.querySelector('[data-bind="insights-grid"]');
+
+        if (headline) headline.textContent = data.headline || 'Análisis Energético — Riohacha';
+        if (summary)  summary.textContent  = data.executiveSummary || data.executive_summary || '';
+        if (context)  context.textContent  = data.solarContext || data.solar_context || '';
+        if (timeEl)   timeEl.textContent   = `Generado: ${new Date().toLocaleTimeString('es-CO', {hour:'2-digit', minute:'2-digit'})}`;
+
+        if (grid) {
+            const items = data.insights || STATIC_INSIGHTS;
+            const impactColors = { alto: 'text-emerald-400', medio: 'text-yellow-400', bajo: 'text-sky-400' };
+            grid.innerHTML = items.map(i => `
+                <div class="insight-card">
+                    <div class="text-2xl mb-3">${i.icon}</div>
+                    <div class="text-sm font-semibold text-white mb-2">${i.title}</div>
+                    <p class="text-xs leading-5 text-white/60">${i.body}</p>
+                    <div class="mt-3 text-[10px] uppercase tracking-wider ${impactColors[i.impact] || 'text-white/40'}">Impacto ${i.impact}</div>
+                </div>
+            `).join('');
+        }
+    };
+
+    const loadInsights = async () => {
+        const idx = activeProfileIndex;
+        // Use cached data if available for this profile
+        if (insightsCache[idx]) {
+            renderInsights(insightsCache[idx]);
+            return;
+        }
+        const profile = getActiveProfile();
+        try {
+            const data = await fetchJson('/api/ai/insights', {
+                method: 'POST',
+                body: JSON.stringify({
+                    targetType: profile.targetType,
+                    name: profile.name,
+                    companyType: profile.companyType || '',
+                    monthlyConsumptionKwh: profile.monthlyConsumptionKwh || 0,
+                    tariffCopKwh: profile.tariffCopKwh || 1050,
+                    populationEstimate: profile.populationEstimate || null,
+                }),
+            });
+            insightsCache[idx] = data;
+            renderInsights(data);
+        } catch {
+            const fallback = profile.fallbackInsights || {
+                headline: 'Riohacha · Mayor Potencial Solar de Colombia',
+                executiveSummary: 'La Guajira recibe hasta 7.0 kWh/m²/día, 40% sobre el promedio nacional. Las PYMES de Riohacha pueden reducir su factura hasta un 40% optimizando el consumo en las horas de máxima radiación.',
+                insights: STATIC_INSIGHTS,
+                solarContext: 'Riohacha · La Guajira · 7.0 kWh/m²/día promedio anual · Mayor potencial solar de Colombia',
+            };
+            insightsCache[idx] = fallback;
+            renderInsights(fallback);
+        }
+    };
+
+    /* Refresh insights button — clears cache for current profile and reloads */
+    document.addEventListener('click', (e) => {
+        if (e.target.closest('[data-role="refresh-insights"]')) {
+            delete insightsCache[activeProfileIndex];
+            loadInsights();
+        }
+    });
+
+    /* ── Solar Simulator ── */
+    let simulatorChart = null;
+    let simulatorListenerAttached = false;
+
+    const initSimulator = () => {
+        const slider = document.getElementById('kwp-slider');
+        if (!slider) return;
+        // Attach listener only once — updateSimulator always reads the active profile
+        if (!simulatorListenerAttached) {
+            slider.addEventListener('input', () => updateSimulator(parseFloat(slider.value)));
+            simulatorListenerAttached = true;
+        }
+        // Always recalculate with current profile when entering the view
+        updateSimulator(parseFloat(slider.value));
+    };
+
+    const updateSimulator = (kwp) => {
+        const kwpDisplay = document.querySelector('[data-bind="sim-kwp"]');
+        if (kwpDisplay) kwpDisplay.textContent = kwp.toFixed(1);
+
+        const profile = getActiveProfile();
+        const tariff = profile.tariffCopKwh || 1050;
+        const monthlyKwh = profile.monthlyConsumptionKwh || 5400;
+
+        const PSH = 5.0, EFF = 0.80, CPK = 3_500_000, CO2F = 0.214;
+        const annualGen   = kwp * PSH * EFF * 365;
+        const investment  = kwp * CPK;
+        const annualSav   = annualGen * tariff;
+        const payback     = annualSav > 0 ? investment / annualSav : 999;
+        const co2         = annualGen * CO2F;
+        const annualKwh   = monthlyKwh * 12;
+        const coverage    = Math.min(100, (annualGen / annualKwh) * 100);
+
+        const fmt = (n) => n >= 1_000_000
+            ? `$${(n/1_000_000).toFixed(1)}M`
+            : `$${Math.round(n).toLocaleString('es-CO')}`;
+
+        const set = (bind, val) => {
+            document.querySelectorAll(`[data-bind="${bind}"]`).forEach(el => el.textContent = val);
+        };
+
+        set('sim-investment', fmt(investment));
+        set('sim-gen', `${Math.round(annualGen).toLocaleString('es-CO')} kWh`);
+        set('sim-savings-year', fmt(annualSav));
+        set('sim-payback', `${payback.toFixed(1)} años`);
+        set('sim-co2', `${Math.round(co2).toLocaleString('es-CO')} kg`);
+        set('sim-coverage', `${coverage.toFixed(1)}%`);
+        set('sim-coverage-label', `${coverage.toFixed(1)}%`);
+
+        const bar = document.querySelector('[data-bind="sim-coverage-bar"]');
+        if (bar) bar.style.width = `${coverage}%`;
+
+        const summary = document.querySelector('[data-bind="sim-summary"]');
+        if (summary) {
+            summary.textContent = `${kwp.toFixed(1)} kWp cubrirían el ${coverage.toFixed(0)}% del consumo de ${profile.name}. ` +
+                `La inversión de ${fmt(investment)} se recuperaría en ${payback.toFixed(1)} años y evitaría ${Math.round(co2).toLocaleString('es-CO')} kg de CO₂ por año.`;
+        }
+    };
+
     /* ── Clock ── */
     const updateClock = () => {
         const now = new Date();
@@ -773,11 +1306,26 @@ if (dashboardRoot) {
             if (elements.heroLocation) elements.heroLocation.textContent = today.location || 'Riohacha, Colombia';
             if (elements.heroState) elements.heroState.textContent = today.solarIndexLabel || 'Radiación estable';
             if (elements.heroTemp) elements.heroTemp.textContent = `${Math.round(today.temperatureC)}°C`;
-            if (elements.heroHumidity) elements.heroHumidity.textContent = '68%';
+            if (elements.heroWind) elements.heroWind.textContent = today.windSpeedKmh != null ? `${Math.round(today.windSpeedKmh)} km/h` : '—';
             if (elements.sunrise) elements.sunrise.textContent = today.sunrise || '--:--';
             if (elements.sunset) elements.sunset.textContent = today.sunset || '--:--';
             if (elements.productionStatus) elements.productionStatus.textContent = today.solarIndexLabel || 'Producción óptima.';
-            if (elements.uvIndex) elements.uvIndex.textContent = score?.score ? String(score.score) : '—';
+            if (elements.uvIndex) elements.uvIndex.textContent = today.uvIndex != null ? today.uvIndex.toFixed(1) : (score?.score ? String(score.score) : '—');
+
+            // UV bar — dynamic width + color
+            const uvBar = document.querySelector('[data-bind="uv-bar"]');
+            if (uvBar && today.uvIndex != null) {
+                const uvPct = Math.min(100, (today.uvIndex / 11) * 100);
+                uvBar.style.width = `${uvPct}%`;
+                uvBar.className = 'h-full rounded-full transition-all duration-700';
+                if (today.uvIndex < 3)      uvBar.classList.add('bg-green-400');
+                else if (today.uvIndex < 6) uvBar.classList.add('bg-yellow-400');
+                else if (today.uvIndex < 8) uvBar.classList.add('bg-orange-400');
+                else                         uvBar.classList.add('bg-red-400');
+            }
+
+            if (elements.optimalHours) elements.optimalHours.textContent = today.optimalHours?.length ? today.optimalHours.join(', ') : '—';
+            if (elements.peakCostHours) elements.peakCostHours.textContent = today.peakCostHours?.length ? today.peakCostHours.join(', ') : '—';
 
             animateNumber(elements.heroRadiation, today.radiationKwhM2, { decimals: 1, suffix: ' kWh/m²' });
             animateNumber(elements.solarIndex, score?.score || today.solarIndex || 0, { decimals: 0 });
@@ -785,24 +1333,35 @@ if (dashboardRoot) {
             if (elements.solarIndexLabel) elements.solarIndexLabel.textContent = score?.label || today.solarIndexLabel || 'Día estable';
             if (elements.solarSummary) elements.solarSummary.textContent = score?.summary || 'Radiación estable para las próximas horas.';
 
-            // ── Progress bars ──
-            if (elements.productionProgress) {
-                elements.productionProgress.style.width = `${Math.max(0, Math.min((score?.score || today.solarIndex || 0), 100))}%`;
+            // Comparativa vs. promedio histórico 90 días (NASA POWER)
+            if (elements.radiationVsHistorical && score?.historicalAvgKwhM2 > 0) {
+                const vsP = score.vsHistoricalPct;
+                const sign = vsP >= 0 ? '+' : '';
+                const color = vsP >= 2 ? 'text-emerald-400' : vsP < -2 ? 'text-orange-400' : 'text-white/55';
+                elements.radiationVsHistorical.innerHTML =
+                    `<span class="${color}">${sign}${vsP}%</span> vs. promedio 90d · ${score.historicalAvgKwhM2} kWh/m²`;
             }
+
+            // ── Progress bars ──
+            const scoreVal = score?.score || today.solarIndex || 0;
+            if (elements.productionProgress) {
+                elements.productionProgress.style.width = `${Math.max(0, Math.min(scoreVal, 100))}%`;
+            }
+            if (elements.productionPct) elements.productionPct.textContent = `${scoreVal}/100`;
 
             renderForecastList(state.forecast);
             renderHourly(today);
-            renderMonitoredCities();
             renderMapCard(today, score);
 
-            // ── Battery ──
-            renderBattery(null, today);
-
             // ── Consumption ──
-            renderConsumption(null, today);
+            renderConsumption(today);
+
+            // ── ROI Solar ──
+            const activeProfile = getActiveProfile();
+            renderROI(activeProfile, activeProfile.tariffCopKwh || TARIFF_COP_KWH);
 
             // ── Charts (lazy, after CDN loads) ──
-            renderConsumptionChart();
+            renderConsumptionChart(today);
 
             // Try load history (non-blocking)
             renderHistory(7);
@@ -813,12 +1372,10 @@ if (dashboardRoot) {
             if (window.lucide) window.lucide.createIcons();
         } catch (error) {
             console.error('Dashboard load error:', error);
-            try {
-                const fallback = await fetchJson('/api/ai/recommendations/demo');
-                renderRecommendations(fallback);
-            } catch {
-                console.error('Error al cargar datos. Revisa la conexión con la API.');
-            }
+            // API de datos solares no disponible — usar recomendaciones estáticas del perfil activo
+            const profile = getActiveProfile();
+            renderRecommendations(profile.recommendations);
+            showFallbackIndicators(error);
             // Still try consumption chart on fallback
             renderConsumptionChart();
         }
@@ -861,7 +1418,7 @@ if (dashboardRoot) {
 
             if (problemsEl && profile.mainProblems) {
                 problemsEl.innerHTML = profile.mainProblems.map(p => `
-                    <div class="flex items-center gap-2 rounded-xl border border-white/8 bg-white/[0.03] px-3 py-2 text-sm text-white/70">
+                    <div class="community-problem-item flex items-center gap-2 rounded-xl px-3 py-2 text-sm">
                         <span class="h-1.5 w-1.5 rounded-full bg-orange-400 shrink-0"></span>
                         ${p.charAt(0).toUpperCase() + p.slice(1)}
                     </div>
@@ -870,32 +1427,234 @@ if (dashboardRoot) {
         }
     };
 
-    const loadProfileRecommendations = () => {
+    const showFallbackIndicators = (error) => {
+        const badge = document.querySelector('[data-bind="ai-fallback-badge"]');
+        const msg = document.querySelector('[data-bind="ai-fallback-message"]');
+        if (badge) badge.classList.remove('hidden');
+        if (msg) {
+            msg.textContent = isServiceUnavailable(error)
+                ? '⚡ La cuota del agente IA está agotada por hoy. Mostrando recomendaciones precargadas para este perfil.'
+                : '⚠ No se pudo conectar con el agente. Mostrando recomendaciones predeterminadas.';
+            msg.classList.remove('hidden');
+        }
+    };
+
+    const hideFallbackIndicators = () => {
+        document.querySelector('[data-bind="ai-fallback-badge"]')?.classList.add('hidden');
+        document.querySelector('[data-bind="ai-fallback-message"]')?.classList.add('hidden');
+    };
+
+    const loadProfileRecommendations = async () => {
         const profile = getActiveProfile();
+        const cacheKey = activeProfileIndex;
 
-        // Update greeting
-        setText(elements.profileGreeting, `Bienvenido, ${profile.name}`);
-
-        // Update section visibility based on targetType
+        setText(elements.profileGreeting, `Bienvenido, ${profile.name}`); // null-safe
+        const sub = profile.targetType === 'community'
+            ? `${profile.name} · Comunidad`
+            : `${profile.name} · ${profile.companyType || 'Empresa'}`;
+        setText(elements.profileGreetingSub, sub);
         updateSectionVisibility(profile);
 
-        // Render recommendations from local profile data (no API needed)
-        renderRecommendations(profile.recommendations);
+        // Si ya tenemos resultado cacheado para este perfil, úsalo directamente
+        if (recommendationsCache[cacheKey]) {
+            hideFallbackIndicators();
+            renderRecommendations(recommendationsCache[cacheKey]);
+            return;
+        }
+
+        hideFallbackIndicators();
+
+        const reasoningEl = document.querySelector('[data-bind="ai-reasoning"]');
+        const alertEl = document.querySelector('[data-bind="ai-alert"]');
+        if (reasoningEl) reasoningEl.classList.add('hidden');
+        if (alertEl) alertEl.classList.add('hidden');
+
+        // Clear stale savings so previous profile's values don't linger
+        document.querySelectorAll('[data-bind="savings-daily"]').forEach(el => { el.textContent = '—'; });
+        document.querySelectorAll('[data-bind="savings-monthly"]').forEach(el => { el.textContent = '—'; });
+        document.querySelectorAll('[data-bind="consumption-savings-pct"]').forEach(el => { el.textContent = '—'; });
+        if (elements.aiReductionPct) elements.aiReductionPct.textContent = '—';
+
+        // Loading state
+        if (elements.recommendationsList) {
+            elements.recommendationsList.innerHTML = `
+                <div class="flex items-center gap-3 rounded-xl border border-white/8 bg-white/[0.03] px-4 py-3 text-sm text-white/40">
+                    <span class="inline-flex gap-1">
+                        <span class="animate-pulse">.</span>
+                        <span class="animate-pulse" style="animation-delay:0.2s">.</span>
+                        <span class="animate-pulse" style="animation-delay:0.4s">.</span>
+                    </span>
+                    Consultando agente IA...
+                </div>`;
+        }
+
+        try {
+            const payload = {
+                targetType: profile.targetType,
+                name: profile.name,
+                ...(profile.targetType !== 'community'
+                    ? {
+                        companyType: profile.companyType,
+                        monthlyConsumptionKwh: profile.monthlyConsumptionKwh,
+                        companySize: profile.companySize,
+                        peakUsageHours: profile.peakUsageHours,
+                        mainLoads: profile.mainLoads,
+                        tariffCopKwh: profile.tariffCopKwh,
+                        operatingHoursPerDay: profile.operatingHoursPerDay ?? null,
+                    }
+                    : {
+                        populationEstimate: profile.populationEstimate,
+                        mainProblems: profile.mainProblems,
+                    }),
+            };
+
+            const data = await fetchJson('/api/ai/recommendations', {
+                method: 'POST',
+                body: JSON.stringify(payload),
+            });
+            // Solo cachear si viene del agente real
+            recommendationsCache[cacheKey] = data;
+            const liveTime = new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
+            const liveTimeEl = document.querySelector('[data-bind="ai-generated-time"]');
+            if (liveTimeEl) liveTimeEl.textContent = `Generado hoy a las ${liveTime}`;
+            // Show "IA en vivo" badge, hide fallback badge
+            document.querySelector('[data-bind="ai-live-badge"]')?.classList.remove('hidden');
+            document.querySelector('[data-bind="ai-live-badge"]')?.style.setProperty('display', 'inline-flex');
+            document.querySelector('[data-bind="ai-fallback-badge"]')?.classList.add('hidden');
+            renderRecommendations(data);
+        } catch (apiError) {
+            console.warn('AI recommendations API failed:', apiError);
+
+            // Fallback: datos del perfil activo — siempre coherentes con el perfil mostrado
+            renderRecommendations(profile.recommendations);
+            showFallbackIndicators(apiError);
+        }
     };
 
     const switchProfile = async (index) => {
         activeProfileIndex = index;
+        // alertsCache and insightsCache persist — data already fetched for this profile is reused
         const profile = getActiveProfile();
 
-        // Update greeting
-        setText(elements.profileGreeting, `Bienvenido, ${profile.name}`);
+        setText(elements.profileGreeting, `Bienvenido, ${profile.name}`); // null-safe
+        const subLabel = profile.targetType === 'community'
+            ? `${profile.name} · Comunidad`
+            : `${profile.name} · ${profile.companyType || 'Empresa'}`;
+        setText(elements.profileGreetingSub, subLabel);
+        // Sync profile card active state
+        setActiveCard(index);
 
-        // Update monitored list highlight
-        renderMonitoredCities();
+        // Re-render consumption, ROI and chart with new profile context
+        renderConsumption(state.today);
+        const newProfile = getActiveProfile();
+        renderROI(newProfile, newProfile.tariffCopKwh || TARIFF_COP_KWH);
+        renderConsumptionChart(state.today);
 
-        // Reload recommendations for new profile
+        // If simulator view is open, refresh numbers for new profile immediately
+        if (currentView === 'simulator') {
+            const slider = document.getElementById('kwp-slider');
+            if (slider) updateSimulator(parseFloat(slider.value));
+        }
+
+        // If insights/alerts views are open, load data for new profile (from cache if available)
+        if (currentView === 'ai-analysis') loadInsights();
+        if (currentView === 'alerts') loadAlerts();
+
         await loadProfileRecommendations();
     };
+
+    /* ── Navigation ── */
+    let currentView = 'dashboard';
+
+    const NAV_ACTIVE   = ['text-white', 'bg-white/[0.08]', 'border-white/[0.12]'];
+    const NAV_INACTIVE = ['text-white/50', 'bg-transparent', 'border-transparent'];
+
+    const switchView = (viewName) => {
+        // Hide all views
+        document.querySelectorAll('[data-view]').forEach(v => v.classList.add('hidden'));
+        // Show target
+        const target = document.querySelector(`[data-view="${viewName}"]`);
+        if (target) target.classList.remove('hidden');
+        // Update nav buttons styles
+        document.querySelectorAll('[data-nav]').forEach(btn => {
+            const isActive = btn.dataset.nav === viewName;
+            btn.classList.toggle('active', isActive);
+            NAV_ACTIVE.forEach(c  => btn.classList.toggle(c, isActive));
+            NAV_INACTIVE.forEach(c => btn.classList.toggle(c, !isActive));
+        });
+        currentView = viewName;
+        // Lazy-load view-specific data
+        if (viewName === 'ai-analysis') loadInsights();
+        if (viewName === 'alerts') loadAlerts();
+        if (viewName === 'history') renderHistoryFull(7);
+        if (viewName === 'simulator') initSimulator();
+    };
+
+    document.addEventListener('click', (e) => {
+        const navBtn = e.target.closest('[data-nav]');
+        if (navBtn) switchView(navBtn.dataset.nav);
+    });
+
+    /* ── History full view tab switching ── */
+    document.addEventListener('click', (e) => {
+        const tab = e.target.closest('[data-bind="history-tabs-full"] .tab-button');
+        if (tab) {
+            const parent = tab.closest('[data-bind="history-tabs-full"]');
+            if (parent) {
+                parent.querySelectorAll('.tab-button').forEach(t => {
+                    t.classList.remove('active', 'bg-white/[0.04]', 'text-white/90');
+                    t.classList.add('text-white/55');
+                });
+                tab.classList.add('active', 'bg-white/[0.04]', 'text-white/90');
+                tab.classList.remove('text-white/55');
+            }
+            const map = { 'Semana': 7, 'Mes': 30, 'Año': 365 };
+            const range = map[tab.textContent.trim()];
+            if (range) renderHistoryFull(range);
+        }
+    });
+
+    /* ── Profile card switching ── */
+    const CARD_ACTIVE_CLASSES   = ['border-emerald-400/30', 'bg-emerald-400/[0.06]'];
+    const CARD_INACTIVE_CLASSES = ['border-white/8', 'bg-white/[0.03]'];
+
+    const setActiveCard = (idx) => {
+        document.querySelectorAll('[data-profile-card]').forEach(c => {
+            const isActive = parseInt(c.dataset.profileCard) === idx;
+            c.classList.toggle('active', isActive);
+            CARD_ACTIVE_CLASSES.forEach(cls   => c.classList.toggle(cls, isActive));
+            CARD_INACTIVE_CLASSES.forEach(cls => c.classList.toggle(cls, !isActive));
+            // Sub-label color
+            const typeEl = c.querySelector('[data-card-type]');
+            if (typeEl) {
+                typeEl.classList.toggle('text-emerald-400/70', isActive);
+                typeEl.classList.toggle('text-white/38', !isActive);
+            }
+        });
+    };
+
+    document.addEventListener('click', (e) => {
+        const card = e.target.closest('[data-profile-card]');
+        if (card) {
+            const idx = parseInt(card.dataset.profileCard, 10);
+            if (!isNaN(idx) && idx >= 0 && idx < PROFILES.length) {
+                setActiveCard(idx);
+                switchProfile(idx);
+            }
+        }
+    });
+
+    /* ── Regenerate AI button ── */
+    document.addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-role="regenerate-ai"]');
+        if (!btn) return;
+        // Clear cache for active profile and reload
+        delete recommendationsCache[activeProfileIndex];
+        btn.style.transform = 'rotate(360deg)';
+        btn.style.transition = 'transform 0.5s ease';
+        setTimeout(() => { btn.style.transform = ''; }, 600);
+        loadProfileRecommendations();
+    });
 
     // Profile selector event
     if (elements.profileSelector) {
@@ -989,12 +1748,13 @@ if (dashboardRoot) {
 
         // Add user bubble
         if (chatBox) {
-            chatBox.innerHTML += `
-                <div class="flex justify-end">
-                    <div class="max-w-[85%] rounded-2xl rounded-br-md bg-white/10 px-4 py-2.5 text-sm text-white/90">
-                        ${userMessage}
-                    </div>
-                </div>`;
+            const userDiv = document.createElement('div');
+            userDiv.className = 'flex justify-end';
+            const bubble = document.createElement('div');
+            bubble.className = 'max-w-[85%] rounded-2xl rounded-br-md bg-white/10 px-4 py-2.5 text-sm text-white/90';
+            bubble.textContent = userMessage;
+            userDiv.appendChild(bubble);
+            chatBox.appendChild(userDiv);
             chatBox.scrollTop = chatBox.scrollHeight;
         }
 
@@ -1046,23 +1806,32 @@ if (dashboardRoot) {
             if (typingEl) typingEl.remove();
 
             if (chatBox) {
-                chatBox.innerHTML += `
-                    <div class="flex justify-start">
-                        <div class="max-w-[85%] rounded-2xl rounded-bl-md border border-white/8 bg-white/[0.04] px-4 py-2.5 text-sm leading-6 text-white/75">
-                            ${response.reply}
-                        </div>
-                    </div>`;
+                const replyDiv = document.createElement('div');
+                replyDiv.className = 'flex justify-start';
+                const bubble = document.createElement('div');
+                bubble.className = 'max-w-[85%] rounded-2xl rounded-bl-md border border-white/8 bg-white/[0.04] px-4 py-2.5 text-sm leading-6 text-white/75';
+                bubble.textContent = response.reply;
+                replyDiv.appendChild(bubble);
+                chatBox.appendChild(replyDiv);
                 chatBox.scrollTop = chatBox.scrollHeight;
             }
         } catch (error) {
             const typingEl = document.getElementById(typingId);
             if (typingEl) typingEl.remove();
 
+            const isQuota = isServiceUnavailable(error);
+            const errorMsg = isQuota
+                ? 'Mi cuota de consultas está agotada por hoy. Mientras tanto, revisa las recomendaciones precargadas en el panel de arriba — cubren los escenarios más frecuentes para tu perfil.'
+                : 'No pude conectar con el agente. Verifica la conexión e intenta de nuevo.';
+            const errorStyle = isQuota
+                ? 'border-yellow-400/20 bg-yellow-400/5 text-yellow-200/85'
+                : 'border-red-400/20 bg-red-400/5 text-red-300/80';
+
             if (chatBox) {
                 chatBox.innerHTML += `
                     <div class="flex justify-start">
-                        <div class="max-w-[85%] rounded-2xl rounded-bl-md border border-red-400/20 bg-red-400/5 px-4 py-2.5 text-sm text-red-300/80">
-                            No pude conectar con el agente. Intenta de nuevo.
+                        <div class="max-w-[85%] rounded-2xl rounded-bl-md border ${errorStyle} px-4 py-2.5 text-sm leading-6">
+                            ${errorMsg}
                         </div>
                     </div>`;
                 chatBox.scrollTop = chatBox.scrollHeight;
@@ -1107,6 +1876,9 @@ if (dashboardRoot) {
             });
             tab.classList.add('active', 'bg-white/[0.04]', 'text-white/90');
             tab.classList.remove('text-white/55');
+            // Re-render consumption chart for the selected period
+            const period = { 'Día': 'day', 'Semana': 'week', 'Mes': 'month' }[tab.textContent.trim()] || 'day';
+            renderConsumptionChartForPeriod(period, state.today);
         }
     });
 
@@ -1134,7 +1906,8 @@ if (dashboardRoot) {
         });
     }
 
-    // Init
+    // Init — mark first profile card and dashboard nav as active
+    setActiveCard(0);
     updateClock();
     setInterval(updateClock, 1000);
     initAiAutocomplete();

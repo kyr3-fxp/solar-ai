@@ -1,6 +1,9 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\DashboardController;
 
-Route::get('/', DashboardController::class);
+Route::get('/', function () {
+    return view('dashboard', [
+        'apiBase' => env('SOLAR_API_BASE', 'http://localhost:5016'),
+    ]);
+});

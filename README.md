@@ -1,58 +1,120 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Agente Solar — Frontend
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Dashboard de inteligencia energética solar para PYMES en Riohacha, La Guajira. Interfaz SPA construida sobre Laravel/Blade que consume la API de Agente Solar para mostrar datos en tiempo real, análisis con IA y simulación de ROI fotovoltaico.
 
-## About Laravel
+---
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## Stack
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+| Capa | Tecnología |
+|------|-----------|
+| Framework | Laravel 11 |
+| Plantillas | Blade |
+| CSS | Tailwind CSS v4 |
+| Build | Vite 8 |
+| Gráficas | Chart.js 4 |
+| Mapas | Leaflet.js |
+| Fuente | Instrument Sans (Fontsource) |
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+---
 
-## Learning Laravel
+## Requisitos
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+- PHP 8.2+ con extensiones: `openssl`, `pdo`, `mbstring`, `tokenizer`, `xml`, `ctype`, `json`
+- Composer 2+
+- Node.js 20+ y npm 10+
+- API de Agente Solar corriendo (ver [repositorio del backend](https://github.com/JuanPabloMendozaLopez/Olympus))
 
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+---
 
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
-
-## Agentic Development
-
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
+## Instalación
 
 ```bash
-composer require laravel/boost --dev
+# Clonar el repositorio
+git clone https://github.com/kyr3-fxp/solar-ai.git
+cd solar-ai
 
-php artisan boost:install
+# Dependencias PHP
+composer install
+
+# Configuración de entorno
+cp .env.example .env
+php artisan key:generate
+
+# Configurar URL del backend en .env
+# SOLAR_API_BASE=http://localhost:5000
+
+# Dependencias JS y compilar assets
+npm install
+npm run build
+
+# Iniciar servidor de desarrollo
+php artisan serve --port=8000
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+Abrir en el navegador: `http://localhost:8000`
 
-## Contributing
+---
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+## Desarrollo
 
-## Code of Conduct
+```bash
+# Watch mode — reconstruye CSS/JS en cambios
+npm run dev
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+# Build de producción
+npm run build
+```
 
-## Security Vulnerabilities
+> **Importante:** el template Blade carga assets desde `public/build/manifest.json` generado por Vite. Cualquier cambio en `resources/js/` o `resources/css/` requiere ejecutar `npm run build` para reflejarse.
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+---
 
-## License
+## Estructura de archivos clave
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+```
+resources/
+├── css/
+│   └── app.css              # Design system: variables, glass morphism, componentes
+├── js/
+│   ├── app.js               # Entry point Vite — importa dashboard.js
+│   └── dashboard.js         # Lógica completa del SPA: perfiles, IA, gráficas, navegación
+└── views/
+    └── dashboard.blade.php  # Template principal con todas las secciones
+
+routes/
+└── web.php                  # Define la ruta raíz e inyecta la URL del API
+```
+
+---
+
+## Secciones del dashboard
+
+| Sección | Descripción |
+|---------|-------------|
+| **Dashboard** | Métricas solares en tiempo real: radiación, índice solar, temperatura, pronóstico, mapa Leaflet |
+| **Análisis IA** | Resumen ejecutivo + 3 insights estratégicos generados por LLaMA 3.3 70B |
+| **Simulador** | Calculadora de ROI fotovoltaico: kWp → inversión, generación anual, payback, CO₂ |
+| **Alertas** | Alertas críticas/advertencias/info contextualizadas al perfil activo |
+| **Historial** | Serie histórica NASA POWER con gráfica por semana, mes o año |
+| **Comando AI** | Chat conversacional con el agente energético |
+
+---
+
+## Perfiles de demostración
+
+El sistema incluye 4 perfiles preconfigurados con datos reales de empresas de Riohacha. Cambiar de perfil recalcula instantáneamente consumo, ROI, recomendaciones y alertas. Los resultados de IA se cachean por perfil para evitar llamadas repetidas.
+
+---
+
+## Variables de entorno
+
+| Variable | Descripción | Ejemplo |
+|----------|-------------|---------|
+| `SOLAR_API_BASE` | URL base de la API de Agente Solar | `http://localhost:5000` |
+
+---
+
+## Licencia
+
+MIT

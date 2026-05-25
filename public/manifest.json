@@ -1,0 +1,18 @@
+{
+  "name": "Agente Solar",
+  "short_name": "Agente Solar",
+  "description": "Copiloto energético solar para PYMES en Riohacha, La Guajira",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#050505",
+  "theme_color": "#050505",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "64x64",
+      "type": "image/x-icon"
+    }
+  ],
+  "categories": ["utilities", "productivity"]
+}

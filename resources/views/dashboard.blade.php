@@ -6,6 +6,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{{ config('app.name', 'Solar AI Dashboard') }}</title>
+    {{-- PWA --}}
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#050505">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     @php
     $manifest = json_decode(file_get_contents(public_path('build/manifest.json')), true) ?? [];
     $cssFile = $manifest['resources/css/app.css']['file'] ?? 'assets/app.css';
@@ -883,6 +889,219 @@
             </div>
         </div>
     </main>
+
+    {{-- ── Botón flotante Modo Apagón ────────────────────────────────────── --}}
+    <button id="blackout-fab" title="Activar Modo Apagón" style="
+        position:fixed;bottom:28px;right:28px;z-index:900;
+        display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+        width:68px;height:68px;border-radius:50%;border:2px solid rgba(255,80,80,0.4);
+        background:#b91c1c;color:#fff;cursor:pointer;
+        box-shadow:0 0 0 0 rgba(185,28,28,0.6);
+        animation:blackout-pulse 2.5s ease-in-out infinite;
+        transition:all 0.2s ease;font-family:inherit;">
+        <span style="font-size:18px">⚡</span>
+        <span style="font-size:11px;font-weight:700;letter-spacing:0.05em">APAGÓN</span>
+    </button>
+
+    {{-- ── Overlay Modo Apagón ────────────────────────────────────────────── --}}
+    <div id="blackout-overlay" style="
+        display:none;position:fixed;inset:0;z-index:1000;
+        flex-direction:column;overflow-y:auto;
+        background:linear-gradient(160deg,#0d0000 0%,#1a0a00 40%,#0d0d1a 100%);">
+
+        {{-- Header --}}
+        <div id="blackout-header" style="
+            display:flex;align-items:center;justify-content:space-between;
+            padding:16px 20px;border-bottom:1px solid rgba(255,100,0,0.15);
+            background:linear-gradient(135deg,#200000 0%,#0f172a 100%);position:sticky;top:0;z-index:10;">
+            <div style="display:flex;align-items:center;gap:12px">
+                <span style="font-size:24px;animation:blackout-pulse 1.5s ease-in-out infinite">⚡</span>
+                <div>
+                    <div style="font-size:15px;font-weight:800;color:#fff;letter-spacing:0.04em">MODO APAGÓN</div>
+                    <div id="blackout-status-msg" style="font-size:11px;color:rgba(255,255,255,0.5);margin-top:2px">Activando...</div>
+                </div>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px">
+                <span id="blackout-urgency-badge" style="
+                    font-size:10px;font-weight:700;padding:4px 10px;border-radius:999px;
+                    background:#16a34a;color:#fff;letter-spacing:0.06em">BAJA</span>
+                <button onclick="document.getElementById('blackout-overlay').style.display='none'" style="
+                    background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);
+                    color:rgba(255,255,255,0.6);border-radius:8px;padding:6px 12px;
+                    cursor:pointer;font-size:12px">✕ Ocultar</button>
+            </div>
+        </div>
+
+        {{-- Timer principal --}}
+        <div style="text-align:center;padding:24px 20px 12px;border-bottom:1px solid rgba(255,255,255,0.06)">
+            <div style="font-size:11px;color:rgba(255,255,255,0.4);letter-spacing:0.15em;text-transform:uppercase;margin-bottom:8px">Tiempo sin energía</div>
+            <div id="blackout-timer" style="font-size:52px;font-weight:900;color:#fff;letter-spacing:-2px;line-height:1">0 min</div>
+            <div style="display:flex;justify-content:center;gap:32px;margin-top:14px">
+                <div style="text-align:center">
+                    <div style="font-size:11px;color:rgba(255,255,255,0.35);margin-bottom:3px">Promedio histórico</div>
+                    <div id="blackout-hist-avg" style="font-size:16px;font-weight:700;color:rgba(251,191,36,0.9)">1h 41min</div>
+                </div>
+                <div style="width:1px;background:rgba(255,255,255,0.1)"></div>
+                <div style="text-align:center">
+                    <div style="font-size:11px;color:rgba(255,255,255,0.35);margin-bottom:3px">Radiación ahora</div>
+                    <div id="blackout-radiation" style="font-size:16px;font-weight:700;color:rgba(52,211,153,0.9)">—</div>
+                </div>
+            </div>
+        </div>
+
+        {{-- Sección principal --}}
+        <div id="blackout-section-main" style="padding:0 0 80px">
+
+            {{-- Loading --}}
+            <div id="blackout-loading" style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:48px 20px;gap:12px">
+                <div style="width:32px;height:32px;border:3px solid rgba(251,191,36,0.3);border-top-color:#fbbf24;border-radius:50%;animation:spin 0.8s linear infinite"></div>
+                <span style="font-size:13px;color:rgba(255,255,255,0.5)">Generando plan de supervivencia...</span>
+            </div>
+
+            <div id="blackout-content" style="display:none">
+
+                {{-- Alerta crítica --}}
+                <div id="blackout-critical-alert" style="
+                    display:none;margin:16px;padding:14px 16px;
+                    background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.3);
+                    border-radius:12px;color:#fca5a5;font-size:13px;font-weight:600;
+                    border-left:4px solid #ef4444;line-height:1.5">
+                </div>
+
+                {{-- Autonomía --}}
+                <div style="margin:16px;padding:14px 16px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:12px">
+                    <div style="font-size:11px;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:0.12em;margin-bottom:10px">Autonomía estimada del sistema</div>
+                    <div style="height:8px;background:rgba(255,255,255,0.08);border-radius:999px;overflow:hidden;margin-bottom:8px">
+                        <div id="blackout-autonomy-bar-fill" style="height:100%;width:0%;background:#22c55e;border-radius:999px;transition:width 0.5s ease,background 0.5s ease"></div>
+                    </div>
+                    <div id="blackout-autonomy-text" style="font-size:12px;color:rgba(255,255,255,0.5)">Sin respaldo propio</div>
+                </div>
+
+                {{-- Instrucciones IA --}}
+                <div style="margin:0 16px 16px;padding:14px 16px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:12px">
+                    <div style="font-size:11px;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:0.12em;margin-bottom:8px">Plan del agente</div>
+                    <p id="blackout-instructions" style="font-size:13px;color:rgba(255,255,255,0.8);line-height:1.6;margin:0"></p>
+                </div>
+
+                {{-- Matriz de prioridades --}}
+                <div style="margin:0 16px 16px">
+                    <div style="font-size:11px;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:0.12em;margin-bottom:12px">Matriz de prioridades</div>
+                    <div style="display:grid;gap:10px">
+
+                        <div style="padding:12px 14px;background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.2);border-radius:10px">
+                            <div style="font-size:11px;font-weight:700;color:#4ade80;letter-spacing:0.08em;margin-bottom:8px">🟢 MANTENER ENCENDIDO</div>
+                            <ul id="blackout-keep-list" style="list-style:none;margin:0;padding:0"></ul>
+                        </div>
+
+                        <div style="padding:12px 14px;background:rgba(251,191,36,0.08);border:1px solid rgba(251,191,36,0.2);border-radius:10px">
+                            <div style="font-size:11px;font-weight:700;color:#fbbf24;letter-spacing:0.08em;margin-bottom:8px">🟡 REDUCIR AL MÍNIMO</div>
+                            <ul id="blackout-reduce-list" style="list-style:none;margin:0;padding:0"></ul>
+                        </div>
+
+                        <div style="padding:12px 14px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);border-radius:10px">
+                            <div style="font-size:11px;font-weight:700;color:#f87171;letter-spacing:0.08em;margin-bottom:8px">🔴 DESCONECTAR AHORA</div>
+                            <ul id="blackout-disconnect-list" style="list-style:none;margin:0;padding:0"></ul>
+                        </div>
+
+                    </div>
+                </div>
+
+                {{-- Recuperación --}}
+                <div style="margin:0 16px 16px;padding:14px 16px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:12px">
+                    <div style="font-size:11px;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:0.12em;margin-bottom:10px">Cuando vuelva la luz</div>
+                    <ul id="blackout-recovery-list" style="list-style:none;margin:0;padding:0"></ul>
+                </div>
+
+            </div>{{-- /blackout-content --}}
+        </div>{{-- /blackout-section-main --}}
+
+        {{-- Sección Reporte final --}}
+        <div id="blackout-section-report" style="display:none;padding:0 0 80px">
+
+            <div id="report-loading" style="display:none;flex-direction:column;align-items:center;justify-content:center;padding:48px 20px;gap:12px">
+                <div style="width:32px;height:32px;border:3px solid rgba(251,191,36,0.3);border-top-color:#fbbf24;border-radius:50%;animation:spin 0.8s linear infinite"></div>
+                <span style="font-size:13px;color:rgba(255,255,255,0.5)">Generando reporte del apagón...</span>
+            </div>
+
+            <div id="report-content" style="padding:20px 16px">
+                <div style="text-align:center;margin-bottom:24px">
+                    <div style="font-size:32px;margin-bottom:8px">✅</div>
+                    <div style="font-size:18px;font-weight:800;color:#fff">Apagón finalizado</div>
+                    <div style="display:flex;justify-content:center;gap:24px;margin-top:16px">
+                        <div style="text-align:center">
+                            <div style="font-size:11px;color:rgba(255,255,255,0.4)">Duración</div>
+                            <div id="report-duration" style="font-size:20px;font-weight:700;color:#fff">—</div>
+                        </div>
+                        <div style="width:1px;background:rgba(255,255,255,0.1)"></div>
+                        <div style="text-align:center">
+                            <div style="font-size:11px;color:rgba(255,255,255,0.4)">Promedio histórico</div>
+                            <div id="report-avg" style="font-size:20px;font-weight:700;color:#fbbf24">1h 41min</div>
+                        </div>
+                        <div style="width:1px;background:rgba(255,255,255,0.1)"></div>
+                        <div style="text-align:center">
+                            <div style="font-size:11px;color:rgba(255,255,255,0.4)">Categoría</div>
+                            <div id="report-category-badge" style="font-size:13px;font-weight:700;padding:4px 10px;border-radius:999px;background:#16a34a;color:#fff;display:inline-block;margin-top:4px">
+                                <span id="report-category">—</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="margin-bottom:12px;padding:14px 16px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:12px">
+                    <div style="font-size:11px;color:rgba(255,255,255,0.4);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:8px">Resumen</div>
+                    <p id="report-summary" style="font-size:13px;color:rgba(255,255,255,0.8);line-height:1.6;margin:0"></p>
+                </div>
+
+                <div style="margin-bottom:24px;padding:14px 16px;background:rgba(251,191,36,0.06);border:1px solid rgba(251,191,36,0.2);border-radius:12px">
+                    <div style="font-size:11px;color:#fbbf24;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:8px">💡 Recomendación de batería</div>
+                    <p id="report-battery-rec" style="font-size:13px;color:rgba(255,255,255,0.8);line-height:1.6;margin:0"></p>
+                </div>
+
+                <button onclick="document.getElementById('blackout-overlay').style.display='none'" style="
+                    width:100%;padding:14px;background:#16a34a;color:#fff;font-size:14px;
+                    font-weight:700;border:none;border-radius:12px;cursor:pointer;
+                    letter-spacing:0.04em">Volver al Dashboard</button>
+            </div>
+        </div>{{-- /blackout-section-report --}}
+
+        {{-- Botón terminar apagón (fijo abajo) --}}
+        <div id="blackout-section-main-footer" style="
+            position:fixed;bottom:0;left:0;right:0;padding:16px;z-index:10;
+            background:linear-gradient(transparent,rgba(13,0,0,0.95))">
+            <button id="blackout-end-btn" style="
+                width:100%;padding:14px;
+                background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);
+                color:rgba(255,255,255,0.8);font-size:14px;font-weight:600;
+                border-radius:12px;cursor:pointer;letter-spacing:0.03em">
+                ✅ Apagón terminado → ver reporte
+            </button>
+        </div>
+
+    </div>{{-- /blackout-overlay --}}
+
+    {{-- Estilos y animaciones del Modo Apagón --}}
+    <style>
+        @keyframes blackout-pulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(185,28,28,0.6); }
+            50%       { box-shadow: 0 0 0 12px rgba(185,28,28,0); }
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        #blackout-fab:hover {
+            transform: scale(1.08);
+            border-color: rgba(255,100,100,0.6);
+        }
+    </style>
+
+    {{-- Registro del Service Worker --}}
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/service-worker.js')
+                .catch(() => {/* silencioso en desarrollo */});
+        }
+    </script>
+
 </body>
 
 </html>

@@ -890,6 +890,78 @@
         </div>
     </main>
 
+    {{-- ── Diálogo de configuración Modo Apagón ───────────────────────────── --}}
+    <div id="blackout-activation-dialog" style="
+        display:none;position:fixed;inset:0;z-index:950;
+        background:rgba(0,0,0,0.82);backdrop-filter:blur(6px);
+        align-items:center;justify-content:center;padding:20px;">
+        <div style="
+            background:#100808;border:1px solid rgba(239,68,68,0.35);border-radius:18px;
+            padding:26px 24px;max-width:390px;width:100%;
+            box-shadow:0 0 50px rgba(185,28,28,0.25),0 20px 60px rgba(0,0,0,0.6);">
+
+            <div style="display:flex;align-items:center;gap:11px;margin-bottom:8px">
+                <span style="font-size:24px">⚡</span>
+                <div>
+                    <div style="font-size:16px;font-weight:800;color:#fff;letter-spacing:0.02em">Activar Modo Apagón</div>
+                    <div id="bdlg-profile-name" style="font-size:12px;color:rgba(255,150,80,0.8);margin-top:3px">Hotel Majayura</div>
+                </div>
+            </div>
+
+            <div style="height:1px;background:rgba(239,68,68,0.2);margin:14px 0"></div>
+
+            <p style="font-size:12px;color:rgba(255,255,255,0.45);margin:0 0 16px;line-height:1.6">
+                Informa al agente si cuentas con energía propia para calcular tu autonomía real y darte un plan más preciso.
+            </p>
+
+            {{-- Paneles solares --}}
+            <label id="bdlg-solar-label" style="display:flex;align-items:center;justify-content:space-between;padding:13px 15px;
+                background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:11px;
+                cursor:pointer;margin-bottom:10px;transition:border-color 0.15s">
+                <div>
+                    <div style="font-size:13px;font-weight:600;color:#fff">☀️ Paneles Solares</div>
+                    <div style="font-size:11px;color:rgba(255,255,255,0.4);margin-top:3px">¿Tu negocio tiene instalación fotovoltaica activa?</div>
+                </div>
+                <input type="checkbox" id="bdlg-solar" style="width:18px;height:18px;accent-color:#16a34a;cursor:pointer;flex-shrink:0">
+            </label>
+
+            {{-- Batería --}}
+            <label id="bdlg-battery-label" style="display:flex;align-items:center;justify-content:space-between;padding:13px 15px;
+                background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:11px;
+                cursor:pointer;margin-bottom:10px;transition:border-color 0.15s">
+                <div>
+                    <div style="font-size:13px;font-weight:600;color:#fff">🔋 Batería / UPS</div>
+                    <div style="font-size:11px;color:rgba(255,255,255,0.4);margin-top:3px">¿Tienes banco de baterías o UPS industrial?</div>
+                </div>
+                <input type="checkbox" id="bdlg-battery" style="width:18px;height:18px;accent-color:#16a34a;cursor:pointer;flex-shrink:0">
+            </label>
+
+            {{-- kWh de batería (oculto por defecto) --}}
+            <div id="bdlg-battery-kwh-row" style="display:none;margin-bottom:10px;padding:13px 15px;
+                background:rgba(251,191,36,0.06);border:1px solid rgba(251,191,36,0.25);border-radius:11px">
+                <div style="font-size:12px;color:rgba(251,191,36,0.9);margin-bottom:9px;font-weight:600">Capacidad instalada (kWh):</div>
+                <input type="number" id="bdlg-battery-kwh" value="10" min="1" max="1000" step="1" style="
+                    width:100%;background:rgba(0,0,0,0.45);border:1px solid rgba(255,255,255,0.15);
+                    border-radius:9px;padding:9px 13px;color:#fff;font-size:15px;font-weight:700;
+                    outline:none;box-sizing:border-box">
+            </div>
+
+            <div style="display:flex;gap:10px;margin-top:18px">
+                <button id="bdlg-cancel-btn" style="
+                    flex:1;padding:12px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);
+                    color:rgba(255,255,255,0.55);font-size:13px;border-radius:11px;cursor:pointer;font-family:inherit">
+                    Cancelar
+                </button>
+                <button id="bdlg-start-btn" style="
+                    flex:2;padding:12px;background:#b91c1c;border:2px solid rgba(255,100,100,0.3);
+                    color:#fff;font-size:14px;font-weight:800;border-radius:11px;cursor:pointer;
+                    letter-spacing:0.04em;font-family:inherit">
+                    ⚡ ACTIVAR AHORA
+                </button>
+            </div>
+        </div>
+    </div>
+
     {{-- ── Botón flotante Modo Apagón ────────────────────────────────────── --}}
     <button id="blackout-fab" title="Activar Modo Apagón" style="
         position:fixed;bottom:28px;right:28px;z-index:900;
@@ -919,6 +991,7 @@
                 <div>
                     <div style="font-size:15px;font-weight:800;color:#fff;letter-spacing:0.04em">MODO APAGÓN</div>
                     <div id="blackout-status-msg" style="font-size:11px;color:rgba(255,255,255,0.5);margin-top:2px">Activando...</div>
+                    <div id="blackout-profile-label" style="font-size:10px;color:rgba(255,150,60,0.75);margin-top:2px;letter-spacing:0.03em"></div>
                 </div>
             </div>
             <div style="display:flex;align-items:center;gap:10px">
@@ -946,6 +1019,15 @@
                     <div style="font-size:11px;color:rgba(255,255,255,0.35);margin-bottom:3px">Radiación ahora</div>
                     <div id="blackout-radiation" style="font-size:16px;font-weight:700;color:rgba(52,211,153,0.9)">—</div>
                 </div>
+            </div>
+
+            {{-- Pérdida económica en tiempo real --}}
+            <div id="blackout-loss-row" style="display:none;margin-top:14px;padding:12px 20px;
+                background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);border-radius:12px;
+                text-align:center">
+                <div style="font-size:10px;color:rgba(255,100,100,0.6);letter-spacing:0.12em;text-transform:uppercase;margin-bottom:4px">Pérdida estimada del negocio</div>
+                <div id="blackout-loss-ticker" style="font-size:22px;font-weight:900;color:rgba(239,68,68,0.95);letter-spacing:-0.5px">$0 COP</div>
+                <div id="blackout-loss-rate" style="font-size:11px;color:rgba(255,255,255,0.35);margin-top:3px"></div>
             </div>
         </div>
 

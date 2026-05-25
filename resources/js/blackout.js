@@ -10,6 +10,14 @@ let _activeProfile    = null;   // perfil activo cuando se activó el apagón
 let _blackoutData     = null;   // respuesta del backend
 let _offlineMode      = false;
 
+// Configuración energética declarada en el diálogo
+let _hasSolarPanels   = false;
+let _hasBattery       = false;
+let _batteryKwh       = 0;
+
+// Impacto económico
+let _lossPerHourCop   = 0;
+
 // ── Inicialización ────────────────────────────────────────────────────────
 export function initBlackout(apiBase) {
     _apiBase = apiBase;
@@ -38,22 +46,35 @@ async function onFabClick() {
 
 // ── Activar Modo Apagón ───────────────────────────────────────────────────
 async function activateBlackout() {
-    // Obtener perfil activo del dashboard
+    // 1. Mostrar diálogo de configuración
+    const config = await showActivationDialog();
+    if (!config) return; // usuario canceló
+
+    // 2. Guardar config declarada
+    _hasSolarPanels = config.hasSolarPanels;
+    _hasBattery     = config.hasBattery;
+    _batteryKwh     = config.batteryKwh;
+
+    // 3. Obtener perfil activo del dashboard
     _activeProfile = getCurrentProfile();
 
+    // 4. Iniciar timer y mostrar overlay
     _startTime = Date.now();
     startTimer();
     showOverlay();
     setUrgencyUI('low');
     showLoading(true);
 
+    // 5. Mostrar perfil en header inmediatamente
+    renderProfileLabel(_activeProfile);
+
     const payload = buildPayload(0);
 
     try {
         const data = await callApi('/api/blackout/activate', 'POST', payload);
         if (data.success) {
-            _blackoutData  = data.data;
-            _offlineMode   = false;
+            _blackoutData = data.data;
+            _offlineMode  = false;
             renderBlackoutData(data.data);
         } else {
             renderOfflineFallback(_activeProfile?.companyType || 'hotel');
@@ -67,6 +88,62 @@ async function activateBlackout() {
 
     // Cambiar ícono del FAB
     updateFab(true);
+}
+
+// ── Diálogo de configuración ─────────────────────────────────────────────
+function showActivationDialog() {
+    return new Promise((resolve) => {
+        const dialog = document.getElementById('blackout-activation-dialog');
+        if (!dialog) {
+            resolve({ hasSolarPanels: false, hasBattery: false, batteryKwh: 0 });
+            return;
+        }
+
+        // Mostrar perfil activo en el diálogo
+        const profile = getCurrentProfile();
+        const nameEl  = document.getElementById('bdlg-profile-name');
+        if (nameEl) nameEl.textContent = profile.name;
+
+        // Resetear form
+        const solarCb   = document.getElementById('bdlg-solar');
+        const batteryCb = document.getElementById('bdlg-battery');
+        const kwhInput  = document.getElementById('bdlg-battery-kwh');
+        const kwhRow    = document.getElementById('bdlg-battery-kwh-row');
+        if (solarCb)   solarCb.checked   = false;
+        if (batteryCb) batteryCb.checked = false;
+        if (kwhInput)  kwhInput.value    = '10';
+        if (kwhRow)    kwhRow.style.display = 'none';
+
+        dialog.style.display = 'flex';
+
+        // Toggle kWh al marcar batería
+        if (batteryCb) {
+            batteryCb.onchange = function () {
+                if (kwhRow) kwhRow.style.display = this.checked ? 'block' : 'none';
+            };
+        }
+
+        const startBtn  = document.getElementById('bdlg-start-btn');
+        const cancelBtn = document.getElementById('bdlg-cancel-btn');
+
+        if (startBtn) {
+            startBtn.onclick = () => {
+                dialog.style.display = 'none';
+                resolve({
+                    hasSolarPanels: solarCb?.checked  || false,
+                    hasBattery:     batteryCb?.checked || false,
+                    batteryKwh:     parseFloat(kwhInput?.value || 0) || 0
+                });
+            };
+        }
+
+        if (cancelBtn) {
+            cancelBtn.onclick = () => {
+                dialog.style.display = 'none';
+                resolve(null);
+            };
+        }
+    });
 }
 
 // ── Timer ─────────────────────────────────────────────────────────────────
@@ -98,11 +175,14 @@ function updateTimerDisplay() {
     const el = document.getElementById('blackout-timer');
     if (el) el.textContent = str;
 
-    // Actualizar urgencia en la UI basada en tiempo transcurrido
+    // Actualizar urgencia
     const profileType = _activeProfile?.companyType || 'hotel';
     const autonomy    = _blackoutData?.estimatedAutonomyMinutes || 0;
     const urgency     = computeUrgency(min, autonomy, profileType);
     setUrgencyUI(urgency);
+
+    // Actualizar contador de pérdida
+    updateLossCounter(min);
 }
 
 function computeUrgency(elapsed, autonomy, profileType) {
@@ -121,6 +201,25 @@ function computeUrgency(elapsed, autonomy, profileType) {
     if (elapsed >= AVG)       return 'high';
     if (elapsed >= AVG * 0.5) return 'moderate';
     return 'low';
+}
+
+// ── Contador de pérdida económica ─────────────────────────────────────────
+function updateLossCounter(elapsedMin) {
+    if (!_lossPerHourCop) return;
+    const el = document.getElementById('blackout-loss-ticker');
+    if (!el) return;
+    const loss = Math.round(_lossPerHourCop * elapsedMin / 60);
+    el.textContent = `$${loss.toLocaleString('es-CO')} COP`;
+}
+
+// ── Perfil en header ──────────────────────────────────────────────────────
+function renderProfileLabel(profile) {
+    const el = document.getElementById('blackout-profile-label');
+    if (!el || !profile) return;
+    const kwhText = profile.monthlyConsumptionKwh > 0
+        ? ` · ${(profile.monthlyConsumptionKwh / 1000).toFixed(0)} MWh/mes · $${profile.tariffCopKwh}/kWh`
+        : '';
+    el.textContent = `${profile.name}${kwhText}`;
 }
 
 // ── Refrescar plan cada 30 min ────────────────────────────────────────────
@@ -147,14 +246,14 @@ async function endBlackout() {
 
     try {
         const payload = {
-            profileType:          _activeProfile?.targetType || 'hotel',
-            name:                 _activeProfile?.name || 'Mi negocio',
+            profileType:           _activeProfile?.companyType || 'hotel',
+            name:                  _activeProfile?.name || 'Mi negocio',
             totalMinutes,
-            hasSolarPanels:       false,
-            hasBattery:           false,
-            batteryCapacityKwh:   0,
+            hasSolarPanels:        _hasSolarPanels,
+            hasBattery:            _hasBattery,
+            batteryCapacityKwh:    _batteryKwh,
             monthlyConsumptionKwh: parseFloat(_activeProfile?.monthlyConsumptionKwh || 0),
-            tariffCopKwh:         parseFloat(_activeProfile?.tariffCopKwh || 1050)
+            tariffCopKwh:          parseFloat(_activeProfile?.tariffCopKwh || 1050)
         };
 
         const data = await callApi('/api/blackout/report', 'POST', payload);
@@ -167,9 +266,20 @@ async function endBlackout() {
         renderOfflineReport(totalMinutes);
     } finally {
         showReportLoading(false);
-        _startTime    = null;
-        _blackoutData = null;
+        // Resetear estado
+        _startTime        = null;
+        _blackoutData     = null;
+        _hasSolarPanels   = false;
+        _hasBattery       = false;
+        _batteryKwh       = 0;
+        _lossPerHourCop   = 0;
+        hideLossTicker();
     }
+}
+
+function hideLossTicker() {
+    const el = document.getElementById('blackout-loss-row');
+    if (el) el.style.display = 'none';
 }
 
 // ── Cerrar overlay ────────────────────────────────────────────────────────
@@ -191,10 +301,13 @@ function renderBlackoutData(data) {
     // Status message
     setText('blackout-status-msg', data.statusMessage || '');
 
+    // Perfil en header
+    renderProfileLabel(_activeProfile);
+
     // Alerta crítica
     const alertEl = document.getElementById('blackout-critical-alert');
     if (alertEl) {
-        alertEl.textContent = data.criticalAlert || '';
+        alertEl.textContent   = data.criticalAlert || '';
         alertEl.style.display = data.criticalAlert ? 'block' : 'none';
     }
 
@@ -207,16 +320,29 @@ function renderBlackoutData(data) {
     // Comparativa histórica
     setText('blackout-hist-avg', formatMinutes(data.historicalAvgMinutes || 101));
 
+    // Radiación
+    if (data.currentRadiationKwhM2 > 0) {
+        setText('blackout-radiation', `${data.currentRadiationKwhM2} kWh/m²`);
+    }
+
+    // Impacto económico
+    if (data.lossPerHourCop > 0) {
+        _lossPerHourCop = data.lossPerHourCop;
+        const lossRow = document.getElementById('blackout-loss-row');
+        if (lossRow) lossRow.style.display = 'block';
+        updateLossCounter(getElapsedMinutes());
+        const rateEl = document.getElementById('blackout-loss-rate');
+        if (rateEl) {
+            const rateFormatted = Math.round(data.lossPerHourCop).toLocaleString('es-CO');
+            rateEl.textContent = `$${rateFormatted} COP/hora · carga crítica estimada`;
+        }
+    }
+
     // Matriz de prioridades
     renderPriorityMatrix(data.priorityMatrix);
 
     // Acciones de recuperación
     renderRecoveryActions(data.recoveryActions || []);
-
-    // Radiación
-    if (data.currentRadiationKwhM2 > 0) {
-        setText('blackout-radiation', `${data.currentRadiationKwhM2} kWh/m²`);
-    }
 }
 
 function renderPriorityMatrix(matrix) {
@@ -229,9 +355,13 @@ function renderPriorityMatrix(matrix) {
 function renderLoadList(id, items, icon) {
     const el = document.getElementById(id);
     if (!el) return;
+    if (!items.length) {
+        el.innerHTML = `<li style="padding:6px 0;font-size:12px;opacity:0.4;font-style:italic">Sin elementos</li>`;
+        return;
+    }
     el.innerHTML = items.map(item =>
-        `<li style="display:flex;align-items:flex-start;gap:8px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.06)">
-            <span>${icon}</span>
+        `<li style="display:flex;align-items:flex-start;gap:8px;padding:7px 0;border-bottom:1px solid rgba(255,255,255,0.06)">
+            <span style="flex-shrink:0;margin-top:1px">${icon}</span>
             <span style="font-size:13px;line-height:1.45;opacity:0.9">${item}</span>
         </li>`
     ).join('');
@@ -243,8 +373,9 @@ function renderAutonomyBar(autonomyMin, elapsedMin) {
     if (!bar || !text) return;
 
     if (autonomyMin <= 0) {
-        bar.style.width = '0%';
-        text.textContent = 'Sin respaldo propio';
+        bar.style.width = '3%';
+        bar.style.background = '#374151';
+        text.textContent = 'Sin respaldo propio — 100% dependiente de la red';
         return;
     }
 
@@ -253,16 +384,18 @@ function renderAutonomyBar(autonomyMin, elapsedMin) {
     bar.style.background = pct > 50 ? '#22c55e' : pct > 20 ? '#f59e0b' : '#ef4444';
 
     const remaining = Math.max(0, autonomyMin - elapsedMin);
-    text.textContent = remaining > 0 ? `${formatMinutes(remaining)} restantes` : 'Autonomía agotada';
+    text.textContent = remaining > 0
+        ? `${formatMinutes(remaining)} restantes de autonomía propia`
+        : 'Autonomía agotada — solo red pública';
 }
 
 function renderRecoveryActions(actions) {
     const el = document.getElementById('blackout-recovery-list');
     if (!el || !actions.length) return;
     el.innerHTML = actions.map((a, i) =>
-        `<li style="display:flex;gap:10px;padding:6px 0">
-            <span style="background:rgba(251,191,36,0.2);color:#fbbf24;border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0">${i+1}</span>
-            <span style="font-size:13px;opacity:0.85">${a}</span>
+        `<li style="display:flex;gap:10px;padding:7px 0;border-bottom:1px solid rgba(255,255,255,0.05)">
+            <span style="background:rgba(251,191,36,0.2);color:#fbbf24;border-radius:50%;min-width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0">${i+1}</span>
+            <span style="font-size:13px;opacity:0.85;line-height:1.45">${a}</span>
         </li>`
     ).join('');
 }
@@ -305,10 +438,10 @@ function renderOfflineReport(totalMinutes) {
     const AVG = 101;
     const cat = totalMinutes < 60 ? 'corto' : totalMinutes < AVG * 1.2 ? 'normal' : 'prolongado';
     renderReport({
-        historicalAvgMinutes: AVG,
-        summary:              `El apagón duró ${formatMinutes(totalMinutes)}. Promedio histórico La Guajira: ${formatMinutes(AVG)}.`,
+        historicalAvgMinutes:  AVG,
+        summary:               `El apagón duró ${formatMinutes(totalMinutes)}. Promedio histórico La Guajira: ${formatMinutes(AVG)}.`,
         batteryRecommendation: 'Considera una batería de respaldo para mantener tus cargas críticas autónomas durante el próximo apagón.',
-        durationCategory:     cat
+        durationCategory:      cat
     }, totalMinutes);
 }
 
@@ -316,32 +449,32 @@ function renderOfflineReport(totalMinutes) {
 function renderOfflineFallback(profileType) {
     const plans = {
         hielera: {
-            keep:       ['Compresores principales', 'Sensores de temperatura', 'Iluminación mínima de seguridad'],
-            reduce:     ['Ventilación al 50%'],
-            disconnect: ['Oficinas', 'Iluminación exterior', 'A/C administrativo'],
-            instructions: 'PRIORIDAD: no abras las puertas de los cuartos fríos. Cada apertura acelera la pérdida de temperatura y pone en riesgo el inventario.',
-            critical:    'NO ABRAS los cuartos fríos hasta que vuelva la energía.'
+            keep:       ['Compresores principales de congelación', 'Paneles de control y sensores de temperatura', 'Iluminación mínima de seguridad', 'Sistema de alarma térmica'],
+            reduce:     ['Ventilación de sala de máquinas — bajar a nivel mínimo (30%)', 'Iluminación de áreas de trabajo — reducir al 40%'],
+            disconnect: ['Oficinas y administración', 'Iluminación exterior y letreros', 'A/C de oficinas', 'Sistemas de carga no críticos', 'Pantallas y monitores'],
+            instructions: 'PRIORIDAD ABSOLUTA: no abras las puertas de los cuartos fríos bajo ninguna circunstancia. Cada apertura cuesta entre 2°C y 5°C de temperatura interna y acelera la pérdida del inventario. Si tienes termómetros externos, monitoréalos cada 15 minutos.',
+            critical:    'NO ABRAS los cuartos fríos — cada apertura cuesta temperatura y puede perderse el inventario del día.'
         },
         restaurant: {
-            keep:       ['Cámaras frigoríficas', 'Congeladores', 'POS / Caja', 'Comunicaciones'],
-            reduce:     ['A/C del salón (26°C)', 'Iluminación al 60%'],
-            disconnect: ['Letreros exteriores', 'Cocina no urgente', 'Música ambiental'],
-            instructions: 'Protege las cámaras frigoríficas ante todo. Desconecta lo decorativo y mantén el POS para cerrar cuentas pendientes.',
-            critical:    'Verifica AHORA que las cámaras frigoríficas están cerradas herméticamente.'
+            keep:       ['Cámaras frigoríficas y congeladores', 'POS y sistemas de caja', 'Iluminación de cocina esencial', 'Comunicaciones y teléfono'],
+            reduce:     ['A/C del salón — subir a 26°C (ahorra hasta 35% de carga)', 'Iluminación del salón — bajar al 60%'],
+            disconnect: ['Letreros luminosos exteriores', 'Cocina industrial no urgente (horno, freidoras)', 'Música ambiental y pantallas decorativas', 'Cafetera industrial y equipos de bar no críticos'],
+            instructions: 'Protege las cámaras frigoríficas ante todo — es tu mayor activo en riesgo. Cierra la cocina caliente para nuevos pedidos y prioriza servir lo que ya está preparado. Mantén el POS operativo para cerrar cuentas pendientes.',
+            critical:    'Verifica AHORA que las cámaras frigoríficas están cerradas herméticamente y el termómetro marca temperatura correcta.'
         },
         community: {
-            keep:       ['Bombas de agua', 'Comunicaciones de emergencia', 'Puntos de recarga', 'Seguridad comunitaria'],
-            reduce:     ['Alumbrado público no esencial'],
-            disconnect: ['Decoración iluminada', 'Sistemas no críticos'],
-            instructions: 'Asegura el suministro de agua y comunica a la población. Identifica y asiste a adultos mayores y personas vulnerables.',
-            critical:    'Activa AHORA el protocolo de comunicación de emergencia comunitario.'
+            keep:       ['Bombas de agua potable', 'Comunicaciones de emergencia y difusión', 'Puntos de recarga comunitarios', 'Iluminación de seguridad en zonas críticas'],
+            reduce:     ['Alumbrado público no esencial — apagar el 50% de luminarias', 'Sistemas de riego — diferir para cuando vuelva la energía'],
+            disconnect: ['Alumbrado decorativo y ornamental', 'Sistemas no críticos de edificios públicos', 'Señalética no esencial'],
+            instructions: 'Activa el protocolo de comunicación de emergencia inmediatamente. Asegura el suministro de agua potable como prioridad 1. Identifica y asiste a adultos mayores, centros médicos y personas vulnerables.',
+            critical:    'Activa AHORA el protocolo de comunicación de emergencia e informa a la comunidad sobre el estado del apagón.'
         },
         hotel: {
-            keep:       ['Recepción y cerraduras', 'Iluminación de emergencia', 'Neveras de cocina', 'Bombas de agua', 'Comunicaciones'],
-            reduce:     ['A/C pisos con huéspedes (26°C)', 'Iluminación pasillos al 50%'],
-            disconnect: ['A/C pisos vacíos', 'Iluminación exterior', 'Lavandería', 'Piscina/Jacuzzi', 'Oficinas'],
-            instructions: 'Protege a los huéspedes primero. Informa la situación en recepción y activa iluminación de emergencia en pasillos.',
-            critical:    'Informa AHORA a los huéspedes y activa las cerraduras de emergencia.'
+            keep:       ['Recepción y cerraduras electrónicas', 'Iluminación de emergencia en pasillos', 'Neveras y cuartos fríos de cocina', 'Bombas de agua y presión', 'Comunicaciones (PBX, teléfono)'],
+            reduce:     ['A/C en pisos ocupados — subir de 22°C a 26°C (ahorra 30% de carga)', 'Iluminación de pasillos — reducir al 50%'],
+            disconnect: ['A/C en pisos sin check-in activo', 'Iluminación exterior decorativa', 'Jacuzzi y piscina', 'Oficinas administrativas y lavandería', 'Letreros y señalética luminosa exterior'],
+            instructions: 'Protege a los huéspedes activos primero — informa en recepción sobre el estado y activa iluminación de emergencia en pasillos. Desconecta A/C en pisos vacíos para reducir carga. Mantén neveras de cocina bajo monitoreo constante.',
+            critical:    'Informa AHORA a los huéspedes de la situación, activa cerraduras de emergencia y verifica iluminación de pasillos.'
         }
     };
 
@@ -356,11 +489,13 @@ function renderOfflineFallback(profileType) {
     renderPriorityMatrix({ keep: plan.keep, reduce: plan.reduce, disconnect: plan.disconnect });
     renderAutonomyBar(0, 0);
     renderRecoveryActions([
-        'Espera 3-5 min antes de reconectar equipos pesados.',
-        'Verifica temperatura de refrigeración.',
-        'Reinicia gradual: refrigeración → iluminación → A/C.'
+        'Espera 3–5 minutos antes de reconectar equipos pesados para evitar picos de demanda.',
+        'Verifica temperatura de refrigeración y registra el valor alcanzado.',
+        'Reconecta gradualmente: refrigeración primero → iluminación → A/C.',
+        'Documenta el evento (hora inicio, fin, impacto) para reclamar ante la operadora si supera 4h.'
     ]);
 
+    renderProfileLabel(_activeProfile);
     _offlineMode = true;
 }
 
@@ -434,10 +569,10 @@ function getCurrentProfile() {
 
 function getProfileByIndex(idx) {
     const profiles = [
-        { name: 'Hotel Majayura',          targetType: 'hotel',      companyType: 'hotel',    monthlyConsumptionKwh: 12000, tariffCopKwh: 1050 },
-        { name: 'Hielera del Caribe',       targetType: 'hielera',    companyType: 'hielera',  monthlyConsumptionKwh: 28000, tariffCopKwh: 850  },
-        { name: 'Restaurante Sazón Guajira',targetType: 'restaurant', companyType: 'restaurant',monthlyConsumptionKwh: 8500, tariffCopKwh: 1050 },
-        { name: 'Riohacha',                 targetType: 'community',  companyType: 'community', monthlyConsumptionKwh: 0,    tariffCopKwh: 780  },
+        { name: 'Hotel Majayura',           companyType: 'hotel',      monthlyConsumptionKwh: 12000, tariffCopKwh: 1050 },
+        { name: 'Hielera del Caribe',        companyType: 'hielera',    monthlyConsumptionKwh: 28000, tariffCopKwh: 850  },
+        { name: 'Restaurante Sazón Guajira', companyType: 'restaurant', monthlyConsumptionKwh: 8500,  tariffCopKwh: 1050 },
+        { name: 'Riohacha',                  companyType: 'community',  monthlyConsumptionKwh: 0,     tariffCopKwh: 780  },
     ];
     return profiles[idx] || profiles[0];
 }
@@ -445,15 +580,15 @@ function getProfileByIndex(idx) {
 function buildPayload(elapsedMinutes) {
     const p = _activeProfile || getProfileByIndex(0);
     return {
-        profileType:          p.companyType,
-        name:                 p.name,
-        outageMinutes:        elapsedMinutes,
-        hasSolarPanels:       false,
-        hasBattery:           false,
-        batteryCapacityKwh:   0,
-        criticalLoads:        [],
+        profileType:           p.companyType,
+        name:                  p.name,
+        outageMinutes:         elapsedMinutes,
+        hasSolarPanels:        _hasSolarPanels,
+        hasBattery:            _hasBattery,
+        batteryCapacityKwh:    _batteryKwh,
+        criticalLoads:         [],
         monthlyConsumptionKwh: parseFloat(p.monthlyConsumptionKwh || 0),
-        tariffCopKwh:         parseFloat(p.tariffCopKwh || 1050)
+        tariffCopKwh:          parseFloat(p.tariffCopKwh || 1050)
     };
 }
 
@@ -464,9 +599,9 @@ async function callApi(path, method = 'GET', body = null) {
         headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }
     };
     if (body) opts.body = JSON.stringify(body);
-    const res  = await fetch(`${_apiBase}${path}`, opts);
+    const res = await fetch(`${_apiBase}${path}`, opts);
     return res.json();
 }
 
-// Exportar para uso en dashboard.js (cierre del overlay desde fuera si hace falta)
+// Exportar para uso externo
 export { closeOverlay };

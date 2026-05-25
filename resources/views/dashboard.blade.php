@@ -32,6 +32,580 @@
             grid-template-columns: 1fr;
         }
     </style>
+
+    {{-- ── Modo Apagón: estilos de estado ────────────────────────────────── --}}
+    <style>
+        /* ── Franja de alerta ──────────────────────────────────────────────── */
+        #bs-alert-stripe {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(
+                90deg,
+                transparent 0%,
+                #f59e0b 25%,
+                #fbbf24 50%,
+                #f59e0b 75%,
+                transparent 100%
+            );
+            z-index: 9000;
+            opacity: 0;
+            transform: scaleX(0.5);
+            transition: opacity 0.7s ease, transform 0.9s cubic-bezier(0.22, 1, 0.36, 1);
+            pointer-events: none;
+            will-change: opacity, transform;
+        }
+
+        #blackout-system[data-state="alert"]    #bs-alert-stripe,
+        #blackout-system[data-state="blackout"] #bs-alert-stripe {
+            opacity: 1;
+            transform: scaleX(1);
+            animation: bs-stripe-pulse 2.8s ease-in-out infinite;
+        }
+
+        @keyframes bs-stripe-pulse {
+            0%, 100% { opacity: 0.65; }
+            50%       { opacity: 1;    }
+        }
+
+        /* ── Tono del dashboard en alerta ──────────────────────────────────── */
+        body.is-blackout-alert .dashboard-frame {
+            filter: sepia(0.05) saturate(0.94) brightness(0.98);
+            transition: filter 1.4s ease;
+        }
+
+        /* ── Botón oculto de presentador ───────────────────────────────────── */
+        #bs-demo-alert {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: transparent;
+            border: 1px solid transparent;
+            cursor: pointer;
+            z-index: 9999;
+            opacity: 0;
+            padding: 0;
+            transition: opacity 0.4s ease, background 0.3s ease, border-color 0.3s ease;
+        }
+
+        #bs-demo-alert:hover {
+            opacity: 0.35;
+            background: #f59e0b44;
+            border-color: #f59e0b88;
+        }
+
+        /* ── Ghosting del dashboard en apagón ──────────────────────────────── */
+        body.is-blackout-active .dashboard-frame {
+            filter: saturate(0.1) brightness(0.5) sepia(0.2);
+            transition: filter 0.3s ease;
+        }
+
+        /* ── Overlay cinematográfico ────────────────────────────────────────── */
+        #bs-blackout-cinematic {
+            position: fixed;
+            inset: 0;
+            background: rgba(8, 5, 2, 0);
+            z-index: 8000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            pointer-events: none;
+            transition: background 500ms ease;
+        }
+
+        #bs-blackout-cinematic.bs-cinematic--visible {
+            background: rgba(8, 5, 2, 0.94);
+            pointer-events: auto;
+        }
+
+        /* ── Texto APAGÓN DETECTADO ─────────────────────────────────────────── */
+        #bs-cinematic-text {
+            font-size: clamp(1.3rem, 3.2vw, 2.1rem);
+            font-weight: 800;
+            letter-spacing: 0.24em;
+            color: #f2ece4;
+            text-transform: uppercase;
+            text-align: center;
+            transition: opacity 0.5s ease;
+        }
+
+        #bs-cinematic-text .bs-char {
+            display: inline-block;
+            opacity: 0;
+        }
+
+        #bs-cinematic-text.bs-cinematic-text--visible .bs-char {
+            animation: bs-char-in 0.35s ease forwards;
+        }
+
+        #bs-cinematic-text.bs-cinematic-text--exit {
+            opacity: 0;
+        }
+
+        @keyframes bs-char-in {
+            from { opacity: 0; transform: translateY(6px); }
+            to   { opacity: 1; transform: translateY(0);   }
+        }
+
+        /* ── Área de módulos — bento grid ───────────────────────────────────── */
+        #bs-modules-area {
+            position: absolute;
+            inset: 0;
+            display: grid;
+            grid-template-columns: 1.5fr 1fr 1fr;
+            grid-template-rows: 1.25fr 1fr;
+            gap: 10px;
+            padding: 1.25rem;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.7s ease 0.15s;
+        }
+
+        #bs-modules-area.bs-modules--visible {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        /* ── Posiciones en el grid ───────────────────────────────────────────── */
+        #bs-module-core     { grid-column: 1; grid-row: 1 / 3; }
+        #bs-module-ops      { grid-column: 2; grid-row: 1;     }
+        #bs-module-autonomy { grid-column: 2; grid-row: 2;     }
+        #bs-module-actions  { grid-column: 3; grid-row: 1;     }
+        #bs-module-context  { grid-column: 3; grid-row: 2;     }
+
+        /* ── Módulo base ─────────────────────────────────────────────────────── */
+        .bs-module {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.07);
+            border-radius: 14px;
+            padding: 1.25rem 1.4rem;
+            opacity: 0;
+            transform: translateY(10px);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            transition: opacity 0.55s cubic-bezier(0.22, 1, 0.36, 1),
+                        transform 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+
+        .bs-module.bs-module--visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* ── Núcleo: centrado vertical ───────────────────────────────────────── */
+        #bs-module-core {
+            justify-content: center;
+            gap: 0.1rem;
+        }
+
+        /* ── Ops y Acciones: listas scrollables dentro de su celda ──────────── */
+        #bs-module-ops,
+        #bs-module-actions {
+            overflow: hidden;
+        }
+
+        #bs-module-ops .bs-ops-list,
+        #bs-module-actions .bs-actions-list {
+            overflow-y: auto;
+            flex: 1;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(255,255,255,0.08) transparent;
+            padding-right: 2px;
+        }
+
+        /* ── Módulo 1: Núcleo del Evento ─────────────────────────────────────── */
+        .bs-module-eyebrow {
+            font-size: 0.6rem;
+            font-weight: 700;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            color: rgba(255, 255, 255, 0.3);
+            margin-bottom: 1.2rem;
+        }
+
+        #bs-core-timer {
+            font-size: clamp(3rem, 5.5vw, 5rem);
+            font-weight: 800;
+            font-variant-numeric: tabular-nums;
+            font-family: ui-monospace, 'Cascadia Code', 'Source Code Pro', monospace;
+            color: #f2ece4;
+            letter-spacing: 0.04em;
+            line-height: 1;
+            margin-bottom: 0.3rem;
+        }
+
+        .bs-timer-sublabel {
+            font-size: 0.65rem;
+            color: rgba(255, 255, 255, 0.28);
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            margin-bottom: 1.75rem;
+        }
+
+        /* ── Timeline P50 / P90 ──────────────────────────────────────────────── */
+        .bs-timeline { margin-bottom: 1.4rem; }
+
+        .bs-tl-bar {
+            position: relative;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 9999px;
+            margin-bottom: 0.55rem;
+        }
+
+        .bs-tl-fill {
+            position: absolute;
+            left: 0; top: 0;
+            height: 100%;
+            border-radius: 9999px;
+            background: #10b981;
+            width: 0%;
+            transition: width 1.1s ease, background-color 0.8s ease;
+        }
+
+        .bs-tl-fill[data-zone="amber"] { background: #f59e0b; }
+        .bs-tl-fill[data-zone="red"]   { background: #ef4444; }
+
+        .bs-tl-dot {
+            position: absolute;
+            top: 50%;
+            left: 0%;
+            transform: translate(-50%, -50%);
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #f2ece4;
+            border: 2px solid #080502;
+            box-shadow: 0 0 0 2px rgba(242, 236, 228, 0.28);
+            transition: left 1.1s ease;
+            z-index: 2;
+        }
+
+        .bs-tl-mark {
+            position: absolute;
+            top: -5px;
+            bottom: -5px;
+            width: 1px;
+            background: rgba(255, 255, 255, 0.18);
+        }
+
+        .bs-tl-mark--p50 { left: 28.06%; }
+        .bs-tl-mark--p90 { left: 66.67%; }
+
+        .bs-tl-labels {
+            position: relative;
+            height: 1.1em;
+            font-size: 0.6rem;
+            color: rgba(255, 255, 255, 0.28);
+            letter-spacing: 0.05em;
+        }
+
+        .bs-tl-lbl { position: absolute; white-space: nowrap; }
+        .bs-tl-lbl--start { left: 0; }
+        .bs-tl-lbl--end   { right: 0; }
+        .bs-tl-lbl--p50   { left: 28.06%; transform: translateX(-50%); }
+        .bs-tl-lbl--p90   { left: 66.67%; transform: translateX(-50%); }
+
+        /* ── Frase contextual ─────────────────────────────────────────────────── */
+        #bs-core-phrase {
+            font-size: 0.78rem;
+            color: rgba(255, 255, 255, 0.4);
+            line-height: 1.65;
+            font-style: italic;
+            transition: opacity 0.4s ease;
+        }
+
+        /* ── Módulo 2: Continuidad Operativa ────────────────────────────────── */
+        .bs-ops-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.72rem;
+        }
+
+        .bs-ops-item {
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+        }
+
+        .bs-ops-dot {
+            flex-shrink: 0;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        .bs-ops-dot--active {
+            background: #10b981;
+            animation: bs-dot-active 2.6s ease-in-out infinite;
+        }
+
+        .bs-ops-dot--partial {
+            background: #f59e0b;
+            animation: bs-dot-partial 2.2s ease-in-out infinite;
+        }
+
+        .bs-ops-dot--offline {
+            background: rgba(239, 68, 68, 0.18);
+            border: 1px solid rgba(239, 68, 68, 0.42);
+        }
+
+        @keyframes bs-dot-active {
+            0%, 100% { box-shadow: 0 0 0 0   rgba(16, 185, 129, 0.5); }
+            50%       { box-shadow: 0 0 0 4px rgba(16, 185, 129, 0);   }
+        }
+
+        @keyframes bs-dot-partial {
+            0%, 100% { opacity: 1;   }
+            50%       { opacity: 0.3; }
+        }
+
+        .bs-ops-name {
+            flex: 1;
+            font-size: 0.81rem;
+            color: rgba(255, 255, 255, 0.62);
+        }
+
+        .bs-ops-label {
+            font-size: 0.65rem;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+        }
+
+        .bs-ops-label--active  { color: #10b981; }
+        .bs-ops-label--partial { color: #f59e0b; }
+        .bs-ops-label--offline { color: rgba(239, 68, 68, 0.55); }
+
+        /* ── Módulo 3: Autonomía Inteligente ─────────────────────────────────── */
+        .bs-autonomy-main {
+            font-size: clamp(1.8rem, 4.5vw, 2.4rem);
+            font-weight: 800;
+            font-variant-numeric: tabular-nums;
+            font-family: ui-monospace, 'Cascadia Code', monospace;
+            color: #f2ece4;
+            line-height: 1;
+            margin-bottom: 0.3rem;
+        }
+
+        .bs-autonomy-sub {
+            font-size: 0.67rem;
+            color: rgba(255, 255, 255, 0.32);
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            margin-bottom: 1.1rem;
+        }
+
+        .bs-autonomy-bar-wrap {
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 9999px;
+            margin-bottom: 0.55rem;
+            overflow: hidden;
+        }
+
+        .bs-autonomy-bar-fill {
+            height: 100%;
+            border-radius: 9999px;
+            background: linear-gradient(90deg, #10b981, #34d399);
+            transition: width 1.5s ease;
+            width: 0%;
+        }
+
+        .bs-autonomy-bar-fill.amber { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
+        .bs-autonomy-bar-fill.red   { background: linear-gradient(90deg, #ef4444, #f87171); }
+
+        .bs-autonomy-rec {
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.38);
+            line-height: 1.65;
+        }
+
+        .bs-autonomy-rec strong { color: rgba(255, 255, 255, 0.62); font-weight: 600; }
+
+        /* ── Módulo 4: Acciones Inmediatas ────────────────────────────────────── */
+        .bs-actions-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.7rem;
+        }
+
+        .bs-action-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+            font-size: 0.82rem;
+            color: rgba(255, 255, 255, 0.58);
+            line-height: 1.55;
+        }
+
+        .bs-action-icon {
+            flex-shrink: 0;
+            width: 1.2rem;
+            text-align: center;
+            margin-top: 0.05rem;
+        }
+
+        /* ── Módulo 5: Contexto Regional ─────────────────────────────────────── */
+        .bs-context-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.9rem 1.5rem;
+        }
+
+        .bs-context-stat-value {
+            font-size: 1.45rem;
+            font-weight: 800;
+            color: #f2ece4;
+            font-variant-numeric: tabular-nums;
+            line-height: 1;
+            margin-bottom: 0.22rem;
+        }
+
+        .bs-context-stat-label {
+            font-size: 0.6rem;
+            color: rgba(255, 255, 255, 0.28);
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+        }
+
+        .bs-context-source {
+            grid-column: 1 / -1;
+            font-size: 0.6rem;
+            color: rgba(255, 255, 255, 0.18);
+            letter-spacing: 0.06em;
+            margin-top: 0.25rem;
+        }
+
+        /* ── Botón oculto de presentador → apagón ──────────────────────────── */
+        #bs-demo-blackout {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: transparent;
+            border: 1px solid transparent;
+            cursor: pointer;
+            z-index: 9999;
+            opacity: 0;
+            padding: 0;
+            transition: opacity 0.4s ease, background 0.3s ease, border-color 0.3s ease;
+        }
+
+        #bs-demo-blackout:hover {
+            opacity: 0.35;
+            background: #ef444444;
+            border-color: #ef444488;
+        }
+
+        /* ── Flash de recuperación ───────────────────────────────────────────── */
+        body.bs-recovery-flash::after {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background: rgba(255, 255, 255, 0.82);
+            z-index: 9600;
+            animation: bs-flash-out 0.18s ease-out forwards;
+            pointer-events: none;
+        }
+
+        @keyframes bs-flash-out {
+            from { opacity: 1; }
+            to   { opacity: 0; }
+        }
+
+        /* ── Overlay de recuperación ─────────────────────────────────────────── */
+        #bs-recovery-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(3, 9, 5, 0);
+            z-index: 8500;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 1.1rem;
+            pointer-events: none;
+            transition: background 500ms ease;
+        }
+
+        #bs-recovery-overlay.bs-recovery--visible {
+            background: rgba(3, 9, 5, 0.90);
+            pointer-events: auto;
+        }
+
+        #bs-recovery-overlay.bs-recovery--exit {
+            background: rgba(3, 9, 5, 0);
+            pointer-events: none;
+            transition: background 700ms ease;
+        }
+
+        #bs-recovery-title {
+            font-size: clamp(1.3rem, 3.2vw, 2rem);
+            font-weight: 800;
+            letter-spacing: 0.24em;
+            color: #10b981;
+            text-transform: uppercase;
+            text-align: center;
+            opacity: 0;
+            transform: translateY(6px);
+            transition: opacity 0.7s ease, transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+
+        #bs-recovery-title.bs-rec--visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        #bs-recovery-title.bs-rec--exit {
+            opacity: 0;
+            transition: opacity 0.5s ease;
+        }
+
+        #bs-recovery-sub {
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.4);
+            text-align: center;
+            line-height: 1.7;
+            opacity: 0;
+            transition: opacity 0.6s ease 0.1s;
+            max-width: 360px;
+        }
+
+        #bs-recovery-sub.bs-rec--visible  { opacity: 1; }
+        #bs-recovery-sub.bs-rec--exit     { opacity: 0; transition: opacity 0.5s ease; }
+
+        /* ── Botón oculto de presentador → recovery ─────────────────────────── */
+        #bs-demo-recovery {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: transparent;
+            border: 1px solid transparent;
+            cursor: pointer;
+            z-index: 9999;
+            opacity: 0;
+            padding: 0;
+            transition: opacity 0.4s ease, background 0.3s ease, border-color 0.3s ease;
+        }
+
+        #bs-demo-recovery:hover {
+            opacity: 0.35;
+            background: #10b98144;
+            border-color: #10b98188;
+        }
+    </style>
 </head>
 
 <body
@@ -890,291 +1464,92 @@
         </div>
     </main>
 
-    {{-- ── Diálogo de configuración Modo Apagón ───────────────────────────── --}}
-    <div id="blackout-activation-dialog" style="
-        display:none;position:fixed;inset:0;z-index:950;
-        background:rgba(0,0,0,0.82);backdrop-filter:blur(6px);
-        align-items:center;justify-content:center;padding:20px;">
-        <div style="
-            background:#100808;border:1px solid rgba(239,68,68,0.35);border-radius:18px;
-            padding:26px 24px;max-width:390px;width:100%;
-            box-shadow:0 0 50px rgba(185,28,28,0.25),0 20px 60px rgba(0,0,0,0.6);">
+    {{-- ══ SISTEMA MODO APAGÓN ══════════════════════════════════════════════ --}}
+    {{-- Contenedor raíz del nuevo sistema de 4 estados.                      --}}
+    {{-- data-state: idle | alert | blackout | recovery                       --}}
+    <div id="blackout-system" data-state="idle">
 
-            <div style="display:flex;align-items:center;gap:11px;margin-bottom:8px">
-                <span style="font-size:24px">⚡</span>
-                <div>
-                    <div style="font-size:16px;font-weight:800;color:#fff;letter-spacing:0.02em">Activar Modo Apagón</div>
-                    <div id="bdlg-profile-name" style="font-size:12px;color:rgba(255,150,80,0.8);margin-top:3px">Hotel Majayura</div>
+        {{-- Estado 2: Franja de alerta preventiva ──────────────────────────── --}}
+        <div id="bs-alert-stripe" aria-hidden="true"></div>
+
+        {{-- Botón oculto de presentador — dispara estado "alert"              --}}
+        {{-- Invisible al usuario; solo para demos. Click en esquina inf. izq. --}}
+        <button id="bs-demo-alert" tabindex="-1" title=""></button>
+
+        {{-- Estado 3: Overlay cinematográfico + centro de comando ────────────── --}}
+        <div id="bs-blackout-cinematic" aria-live="assertive" aria-atomic="true">
+
+            {{-- Texto cinematográfico: "APAGÓN DETECTADO" ─────────────────── --}}
+            <div id="bs-cinematic-text"></div>
+
+            {{-- Área de módulos — se ensambla tras la secuencia cinematográfica --}}
+            <div id="bs-modules-area">
+
+                {{-- Módulo 1: Núcleo del Evento ──────────────────────────────── --}}
+                <div id="bs-module-core" class="bs-module">
+                    <div class="bs-module-eyebrow">Núcleo del Evento</div>
+                    <div id="bs-core-timer">00:00:00</div>
+                    <div class="bs-timer-sublabel">tiempo transcurrido</div>
+                    <div class="bs-timeline">
+                        <div class="bs-tl-bar">
+                            <div id="bs-tl-fill" class="bs-tl-fill" data-zone="green"></div>
+                            <span class="bs-tl-mark bs-tl-mark--p50"></span>
+                            <span class="bs-tl-mark bs-tl-mark--p90"></span>
+                            <div id="bs-tl-dot" class="bs-tl-dot"></div>
+                        </div>
+                        <div class="bs-tl-labels">
+                            <span class="bs-tl-lbl bs-tl-lbl--start">0</span>
+                            <span class="bs-tl-lbl bs-tl-lbl--p50">P50 · 101 min</span>
+                            <span class="bs-tl-lbl bs-tl-lbl--p90">P90 · 240 min</span>
+                            <span class="bs-tl-lbl bs-tl-lbl--end">∞</span>
+                        </div>
+                    </div>
+                    <div id="bs-core-phrase">Apagón dentro del rango habitual. La red típicamente recupera antes de los 101 minutos.</div>
                 </div>
-            </div>
 
-            <div style="height:1px;background:rgba(239,68,68,0.2);margin:14px 0"></div>
-
-            <p style="font-size:12px;color:rgba(255,255,255,0.45);margin:0 0 16px;line-height:1.6">
-                Informa al agente si cuentas con energía propia para calcular tu autonomía real y darte un plan más preciso.
-            </p>
-
-            {{-- Paneles solares --}}
-            <label id="bdlg-solar-label" style="display:flex;align-items:center;justify-content:space-between;padding:13px 15px;
-                background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:11px;
-                cursor:pointer;margin-bottom:10px;transition:border-color 0.15s">
-                <div>
-                    <div style="font-size:13px;font-weight:600;color:#fff">☀️ Paneles Solares</div>
-                    <div style="font-size:11px;color:rgba(255,255,255,0.4);margin-top:3px">¿Tu negocio tiene instalación fotovoltaica activa?</div>
+                {{-- Módulo 2: Continuidad Operativa ─────────────────────────── --}}
+                <div id="bs-module-ops" class="bs-module">
+                    <div class="bs-module-eyebrow">Continuidad Operativa</div>
+                    <div class="bs-ops-list"></div>
                 </div>
-                <input type="checkbox" id="bdlg-solar" style="width:18px;height:18px;accent-color:#16a34a;cursor:pointer;flex-shrink:0">
-            </label>
 
-            {{-- Batería --}}
-            <label id="bdlg-battery-label" style="display:flex;align-items:center;justify-content:space-between;padding:13px 15px;
-                background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:11px;
-                cursor:pointer;margin-bottom:10px;transition:border-color 0.15s">
-                <div>
-                    <div style="font-size:13px;font-weight:600;color:#fff">🔋 Batería / UPS</div>
-                    <div style="font-size:11px;color:rgba(255,255,255,0.4);margin-top:3px">¿Tienes banco de baterías o UPS industrial?</div>
+                {{-- Módulo 3: Autonomía Inteligente ─────────────────────────── --}}
+                <div id="bs-module-autonomy" class="bs-module">
+                    <div class="bs-module-eyebrow">Autonomía Inteligente</div>
+                    <div id="bs-autonomy-content"></div>
                 </div>
-                <input type="checkbox" id="bdlg-battery" style="width:18px;height:18px;accent-color:#16a34a;cursor:pointer;flex-shrink:0">
-            </label>
 
-            {{-- kWh de batería (oculto por defecto) --}}
-            <div id="bdlg-battery-kwh-row" style="display:none;margin-bottom:10px;padding:13px 15px;
-                background:rgba(251,191,36,0.06);border:1px solid rgba(251,191,36,0.25);border-radius:11px">
-                <div style="font-size:12px;color:rgba(251,191,36,0.9);margin-bottom:9px;font-weight:600">Capacidad instalada (kWh):</div>
-                <input type="number" id="bdlg-battery-kwh" value="10" min="1" max="1000" step="1" style="
-                    width:100%;background:rgba(0,0,0,0.45);border:1px solid rgba(255,255,255,0.15);
-                    border-radius:9px;padding:9px 13px;color:#fff;font-size:15px;font-weight:700;
-                    outline:none;box-sizing:border-box">
-            </div>
+                {{-- Módulo 4: Acciones Inmediatas ───────────────────────────── --}}
+                <div id="bs-module-actions" class="bs-module">
+                    <div class="bs-module-eyebrow">Acciones Inmediatas</div>
+                    <div id="bs-actions-list" class="bs-actions-list"></div>
+                </div>
 
-            <div style="display:flex;gap:10px;margin-top:18px">
-                <button id="bdlg-cancel-btn" style="
-                    flex:1;padding:12px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);
-                    color:rgba(255,255,255,0.55);font-size:13px;border-radius:11px;cursor:pointer;font-family:inherit">
-                    Cancelar
-                </button>
-                <button id="bdlg-start-btn" style="
-                    flex:2;padding:12px;background:#b91c1c;border:2px solid rgba(255,100,100,0.3);
-                    color:#fff;font-size:14px;font-weight:800;border-radius:11px;cursor:pointer;
-                    letter-spacing:0.04em;font-family:inherit">
-                    ⚡ ACTIVAR AHORA
-                </button>
-            </div>
+                {{-- Módulo 5: Contexto Regional ─────────────────────────────── --}}
+                <div id="bs-module-context" class="bs-module">
+                    <div class="bs-module-eyebrow">Contexto Regional</div>
+                    <div class="bs-context-grid" id="bs-context-grid"></div>
+                </div>
+
+            </div>{{-- /bs-modules-area --}}
+
+        </div>{{-- /bs-blackout-cinematic --}}
+
+        {{-- Botón oculto de presentador — dispara estado "blackout"           --}}
+        {{-- Invisible al usuario; solo para demos. Click en esquina inf. der. --}}
+        <button id="bs-demo-blackout" tabindex="-1" title=""></button>
+
+        {{-- Estado 4: Overlay de recuperación ──────────────────────────────── --}}
+        <div id="bs-recovery-overlay" aria-live="polite">
+            <div id="bs-recovery-title">ENERGÍA RESTAURADA</div>
+            <div id="bs-recovery-sub"></div>
         </div>
+
+        {{-- Botón oculto de presentador — dispara estado "recovery"           --}}
+        {{-- Invisible al usuario; solo para demos. Click en esquina sup. der. --}}
+        <button id="bs-demo-recovery" tabindex="-1" title=""></button>
+
     </div>
-
-    {{-- ── Botón flotante Modo Apagón ────────────────────────────────────── --}}
-    <button id="blackout-fab" title="Activar Modo Apagón" style="
-        position:fixed;bottom:28px;right:28px;z-index:900;
-        display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
-        width:68px;height:68px;border-radius:50%;border:2px solid rgba(255,80,80,0.4);
-        background:#b91c1c;color:#fff;cursor:pointer;
-        box-shadow:0 0 0 0 rgba(185,28,28,0.6);
-        animation:blackout-pulse 2.5s ease-in-out infinite;
-        transition:all 0.2s ease;font-family:inherit;">
-        <span style="font-size:18px">⚡</span>
-        <span style="font-size:11px;font-weight:700;letter-spacing:0.05em">APAGÓN</span>
-    </button>
-
-    {{-- ── Overlay Modo Apagón ────────────────────────────────────────────── --}}
-    <div id="blackout-overlay" style="
-        display:none;position:fixed;inset:0;z-index:1000;
-        flex-direction:column;overflow-y:auto;
-        background:linear-gradient(160deg,#0d0000 0%,#1a0a00 40%,#0d0d1a 100%);">
-
-        {{-- Header --}}
-        <div id="blackout-header" style="
-            display:flex;align-items:center;justify-content:space-between;
-            padding:16px 20px;border-bottom:1px solid rgba(255,100,0,0.15);
-            background:linear-gradient(135deg,#200000 0%,#0f172a 100%);position:sticky;top:0;z-index:10;">
-            <div style="display:flex;align-items:center;gap:12px">
-                <span style="font-size:24px;animation:blackout-pulse 1.5s ease-in-out infinite">⚡</span>
-                <div>
-                    <div style="font-size:15px;font-weight:800;color:#fff;letter-spacing:0.04em">MODO APAGÓN</div>
-                    <div id="blackout-status-msg" style="font-size:11px;color:rgba(255,255,255,0.5);margin-top:2px">Activando...</div>
-                    <div id="blackout-profile-label" style="font-size:10px;color:rgba(255,150,60,0.75);margin-top:2px;letter-spacing:0.03em"></div>
-                </div>
-            </div>
-            <div style="display:flex;align-items:center;gap:10px">
-                <span id="blackout-urgency-badge" style="
-                    font-size:10px;font-weight:700;padding:4px 10px;border-radius:999px;
-                    background:#16a34a;color:#fff;letter-spacing:0.06em">BAJA</span>
-                <button onclick="document.getElementById('blackout-overlay').style.display='none'" style="
-                    background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);
-                    color:rgba(255,255,255,0.6);border-radius:8px;padding:6px 12px;
-                    cursor:pointer;font-size:12px">✕ Ocultar</button>
-            </div>
-        </div>
-
-        {{-- Timer principal --}}
-        <div style="text-align:center;padding:24px 20px 12px;border-bottom:1px solid rgba(255,255,255,0.06)">
-            <div style="font-size:11px;color:rgba(255,255,255,0.4);letter-spacing:0.15em;text-transform:uppercase;margin-bottom:8px">Tiempo sin energía</div>
-            <div id="blackout-timer" style="font-size:52px;font-weight:900;color:#fff;letter-spacing:-2px;line-height:1">0 min</div>
-            <div style="display:flex;justify-content:center;gap:32px;margin-top:14px">
-                <div style="text-align:center">
-                    <div style="font-size:11px;color:rgba(255,255,255,0.35);margin-bottom:3px">Promedio histórico</div>
-                    <div id="blackout-hist-avg" style="font-size:16px;font-weight:700;color:rgba(251,191,36,0.9)">1h 41min</div>
-                </div>
-                <div style="width:1px;background:rgba(255,255,255,0.1)"></div>
-                <div style="text-align:center">
-                    <div style="font-size:11px;color:rgba(255,255,255,0.35);margin-bottom:3px">Radiación ahora</div>
-                    <div id="blackout-radiation" style="font-size:16px;font-weight:700;color:rgba(52,211,153,0.9)">—</div>
-                </div>
-            </div>
-
-            {{-- Pérdida económica en tiempo real --}}
-            <div id="blackout-loss-row" style="display:none;margin-top:14px;padding:12px 20px;
-                background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);border-radius:12px;
-                text-align:center">
-                <div style="font-size:10px;color:rgba(255,100,100,0.6);letter-spacing:0.12em;text-transform:uppercase;margin-bottom:4px">Pérdida estimada del negocio</div>
-                <div id="blackout-loss-ticker" style="font-size:22px;font-weight:900;color:rgba(239,68,68,0.95);letter-spacing:-0.5px">$0 COP</div>
-                <div id="blackout-loss-rate" style="font-size:11px;color:rgba(255,255,255,0.35);margin-top:3px"></div>
-            </div>
-        </div>
-
-        {{-- Sección principal --}}
-        <div id="blackout-section-main" style="padding:0 0 80px">
-
-            {{-- Loading --}}
-            <div id="blackout-loading" style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:48px 20px;gap:12px">
-                <div style="width:32px;height:32px;border:3px solid rgba(251,191,36,0.3);border-top-color:#fbbf24;border-radius:50%;animation:spin 0.8s linear infinite"></div>
-                <span style="font-size:13px;color:rgba(255,255,255,0.5)">Generando plan de supervivencia...</span>
-            </div>
-
-            <div id="blackout-content" style="display:none">
-
-                {{-- Alerta crítica --}}
-                <div id="blackout-critical-alert" style="
-                    display:none;margin:16px;padding:14px 16px;
-                    background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.3);
-                    border-radius:12px;color:#fca5a5;font-size:13px;font-weight:600;
-                    border-left:4px solid #ef4444;line-height:1.5">
-                </div>
-
-                {{-- Autonomía --}}
-                <div style="margin:16px;padding:14px 16px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:12px">
-                    <div style="font-size:11px;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:0.12em;margin-bottom:10px">Autonomía estimada del sistema</div>
-                    <div style="height:8px;background:rgba(255,255,255,0.08);border-radius:999px;overflow:hidden;margin-bottom:8px">
-                        <div id="blackout-autonomy-bar-fill" style="height:100%;width:0%;background:#22c55e;border-radius:999px;transition:width 0.5s ease,background 0.5s ease"></div>
-                    </div>
-                    <div id="blackout-autonomy-text" style="font-size:12px;color:rgba(255,255,255,0.5)">Sin respaldo propio</div>
-                </div>
-
-                {{-- Instrucciones IA --}}
-                <div style="margin:0 16px 16px;padding:14px 16px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:12px">
-                    <div style="font-size:11px;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:0.12em;margin-bottom:8px">Plan del agente</div>
-                    <p id="blackout-instructions" style="font-size:13px;color:rgba(255,255,255,0.8);line-height:1.6;margin:0"></p>
-                </div>
-
-                {{-- Matriz de prioridades --}}
-                <div style="margin:0 16px 16px">
-                    <div style="font-size:11px;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:0.12em;margin-bottom:12px">Matriz de prioridades</div>
-                    <div style="display:grid;gap:10px">
-
-                        <div style="padding:12px 14px;background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.2);border-radius:10px">
-                            <div style="font-size:11px;font-weight:700;color:#4ade80;letter-spacing:0.08em;margin-bottom:8px">🟢 MANTENER ENCENDIDO</div>
-                            <ul id="blackout-keep-list" style="list-style:none;margin:0;padding:0"></ul>
-                        </div>
-
-                        <div style="padding:12px 14px;background:rgba(251,191,36,0.08);border:1px solid rgba(251,191,36,0.2);border-radius:10px">
-                            <div style="font-size:11px;font-weight:700;color:#fbbf24;letter-spacing:0.08em;margin-bottom:8px">🟡 REDUCIR AL MÍNIMO</div>
-                            <ul id="blackout-reduce-list" style="list-style:none;margin:0;padding:0"></ul>
-                        </div>
-
-                        <div style="padding:12px 14px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);border-radius:10px">
-                            <div style="font-size:11px;font-weight:700;color:#f87171;letter-spacing:0.08em;margin-bottom:8px">🔴 DESCONECTAR AHORA</div>
-                            <ul id="blackout-disconnect-list" style="list-style:none;margin:0;padding:0"></ul>
-                        </div>
-
-                    </div>
-                </div>
-
-                {{-- Recuperación --}}
-                <div style="margin:0 16px 16px;padding:14px 16px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:12px">
-                    <div style="font-size:11px;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:0.12em;margin-bottom:10px">Cuando vuelva la luz</div>
-                    <ul id="blackout-recovery-list" style="list-style:none;margin:0;padding:0"></ul>
-                </div>
-
-            </div>{{-- /blackout-content --}}
-        </div>{{-- /blackout-section-main --}}
-
-        {{-- Sección Reporte final --}}
-        <div id="blackout-section-report" style="display:none;padding:0 0 80px">
-
-            <div id="report-loading" style="display:none;flex-direction:column;align-items:center;justify-content:center;padding:48px 20px;gap:12px">
-                <div style="width:32px;height:32px;border:3px solid rgba(251,191,36,0.3);border-top-color:#fbbf24;border-radius:50%;animation:spin 0.8s linear infinite"></div>
-                <span style="font-size:13px;color:rgba(255,255,255,0.5)">Generando reporte del apagón...</span>
-            </div>
-
-            <div id="report-content" style="padding:20px 16px">
-                <div style="text-align:center;margin-bottom:24px">
-                    <div style="font-size:32px;margin-bottom:8px">✅</div>
-                    <div style="font-size:18px;font-weight:800;color:#fff">Apagón finalizado</div>
-                    <div style="display:flex;justify-content:center;gap:24px;margin-top:16px">
-                        <div style="text-align:center">
-                            <div style="font-size:11px;color:rgba(255,255,255,0.4)">Duración</div>
-                            <div id="report-duration" style="font-size:20px;font-weight:700;color:#fff">—</div>
-                        </div>
-                        <div style="width:1px;background:rgba(255,255,255,0.1)"></div>
-                        <div style="text-align:center">
-                            <div style="font-size:11px;color:rgba(255,255,255,0.4)">Promedio histórico</div>
-                            <div id="report-avg" style="font-size:20px;font-weight:700;color:#fbbf24">1h 41min</div>
-                        </div>
-                        <div style="width:1px;background:rgba(255,255,255,0.1)"></div>
-                        <div style="text-align:center">
-                            <div style="font-size:11px;color:rgba(255,255,255,0.4)">Categoría</div>
-                            <div id="report-category-badge" style="font-size:13px;font-weight:700;padding:4px 10px;border-radius:999px;background:#16a34a;color:#fff;display:inline-block;margin-top:4px">
-                                <span id="report-category">—</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div style="margin-bottom:12px;padding:14px 16px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:12px">
-                    <div style="font-size:11px;color:rgba(255,255,255,0.4);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:8px">Resumen</div>
-                    <p id="report-summary" style="font-size:13px;color:rgba(255,255,255,0.8);line-height:1.6;margin:0"></p>
-                </div>
-
-                <div style="margin-bottom:24px;padding:14px 16px;background:rgba(251,191,36,0.06);border:1px solid rgba(251,191,36,0.2);border-radius:12px">
-                    <div style="font-size:11px;color:#fbbf24;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:8px">💡 Recomendación de batería</div>
-                    <p id="report-battery-rec" style="font-size:13px;color:rgba(255,255,255,0.8);line-height:1.6;margin:0"></p>
-                </div>
-
-                <button onclick="document.getElementById('blackout-overlay').style.display='none'" style="
-                    width:100%;padding:14px;background:#16a34a;color:#fff;font-size:14px;
-                    font-weight:700;border:none;border-radius:12px;cursor:pointer;
-                    letter-spacing:0.04em">Volver al Dashboard</button>
-            </div>
-        </div>{{-- /blackout-section-report --}}
-
-        {{-- Botón terminar apagón (fijo abajo) --}}
-        <div id="blackout-section-main-footer" style="
-            position:fixed;bottom:0;left:0;right:0;padding:16px;z-index:10;
-            background:linear-gradient(transparent,rgba(13,0,0,0.95))">
-            <button id="blackout-end-btn" style="
-                width:100%;padding:14px;
-                background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);
-                color:rgba(255,255,255,0.8);font-size:14px;font-weight:600;
-                border-radius:12px;cursor:pointer;letter-spacing:0.03em">
-                ✅ Apagón terminado → ver reporte
-            </button>
-        </div>
-
-    </div>{{-- /blackout-overlay --}}
-
-    {{-- Estilos y animaciones del Modo Apagón --}}
-    <style>
-        @keyframes blackout-pulse {
-            0%, 100% { box-shadow: 0 0 0 0 rgba(185,28,28,0.6); }
-            50%       { box-shadow: 0 0 0 12px rgba(185,28,28,0); }
-        }
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-        #blackout-fab:hover {
-            transform: scale(1.08);
-            border-color: rgba(255,100,100,0.6);
-        }
-    </style>
 
     {{-- Registro del Service Worker --}}
     <script>

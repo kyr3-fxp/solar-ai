@@ -167,10 +167,11 @@ function runCinematicTransition() {
 // ── Módulo 1: Núcleo del Evento ───────────────────────────────────────────
 
 function formatTimer(totalSeconds) {
-    const h = Math.floor(totalSeconds / 3600);
-    const m = Math.floor((totalSeconds % 3600) / 60);
-    const s = totalSeconds % 60;
-    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+    const h = String(Math.floor(totalSeconds / 3600)).padStart(2, '0');
+    const m = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, '0');
+    const s = String(totalSeconds % 60).padStart(2, '0');
+    const sep = '<span class="bs-timer-sep">:</span>';
+    return `${h}${sep}${m}${sep}${s}`;
 }
 
 function startCoreModule() {
@@ -185,7 +186,7 @@ function startCoreModule() {
         const elapsedMin = elapsedMs / 60000;
 
         // Timer
-        if (timerEl) timerEl.textContent = formatTimer(elapsedSec);
+        if (timerEl) timerEl.innerHTML = formatTimer(elapsedSec);
 
         // Posición en la barra (0–100%)
         const pct = Math.min((elapsedMin / MAX_MIN) * 100, 100);
@@ -226,7 +227,7 @@ function stopCoreModule() {
     const fillEl   = document.getElementById('bs-tl-fill');
     const phraseEl = document.getElementById('bs-core-phrase');
 
-    if (timerEl)  timerEl.textContent  = '00:00:00';
+    if (timerEl)  timerEl.innerHTML = formatTimer(0);
     if (dotEl)    dotEl.style.left     = '0%';
     if (fillEl) { fillEl.style.width   = '0%'; fillEl.dataset.zone = 'green'; }
     if (phraseEl) phraseEl.textContent = 'Apagón dentro del rango habitual. La red típicamente recupera antes de los 101 minutos.';
@@ -367,9 +368,7 @@ function renderActionsModule() {
     actions.forEach(action => {
         const div = document.createElement('div');
         div.className = 'bs-action-item';
-        div.innerHTML =
-            `<span class="bs-action-icon">${action.icon}</span>` +
-            `<span>${action.text}</span>`;
+        div.innerHTML = `<span>${action.text}</span>`;
         listEl.appendChild(div);
     });
 }

@@ -219,6 +219,48 @@
             padding-right: 2px;
         }
 
+        /* ── Acento de color por módulo ──────────────────────────────────────── */
+        #bs-module-core {
+            border-left: 3px solid rgba(242, 236, 228, 0.3);
+            background: linear-gradient(135deg, rgba(242,236,228,0.04) 0%, rgba(255,255,255,0.02) 100%);
+        }
+        #bs-module-ops {
+            border-left: 3px solid rgba(16, 185, 129, 0.45);
+            background: linear-gradient(135deg, rgba(16,185,129,0.05) 0%, rgba(255,255,255,0.02) 100%);
+        }
+        #bs-module-autonomy {
+            border-left: 3px solid rgba(245, 158, 11, 0.45);
+            background: linear-gradient(135deg, rgba(245,158,11,0.05) 0%, rgba(255,255,255,0.02) 100%);
+        }
+        #bs-module-actions {
+            border-left: 3px solid rgba(239, 68, 68, 0.45);
+            background: linear-gradient(135deg, rgba(239,68,68,0.05) 0%, rgba(255,255,255,0.02) 100%);
+        }
+        #bs-module-context {
+            border-left: 3px solid rgba(99, 102, 241, 0.45);
+            background: linear-gradient(135deg, rgba(99,102,241,0.05) 0%, rgba(255,255,255,0.02) 100%);
+        }
+
+        /* ── Eyebrow: color + icono por módulo ───────────────────────────────── */
+        #bs-module-core     .bs-module-eyebrow { color: rgba(242, 236, 228, 0.55); }
+        #bs-module-ops      .bs-module-eyebrow { color: rgba(16,  185, 129, 0.7);  }
+        #bs-module-autonomy .bs-module-eyebrow { color: rgba(245, 158,  11, 0.7);  }
+        #bs-module-actions  .bs-module-eyebrow { color: rgba(239,  68,  68, 0.7);  }
+        #bs-module-context  .bs-module-eyebrow { color: rgba(99,  102, 241, 0.7);  }
+
+        #bs-module-core     .bs-module-eyebrow::before { content: '◉ '; }
+        #bs-module-ops      .bs-module-eyebrow::before { content: '⬡ '; }
+        #bs-module-autonomy .bs-module-eyebrow::before { content: '⚡ '; }
+        #bs-module-actions  .bs-module-eyebrow::before { content: '▷ '; }
+        #bs-module-context  .bs-module-eyebrow::before { content: '◈ '; }
+
+        /* ── Separadores del timer en ámbar ──────────────────────────────────── */
+        .bs-timer-sep {
+            color: #f59e0b;
+            opacity: 0.6;
+            font-weight: 300;
+        }
+
         /* ── Módulo 1: Núcleo del Evento ─────────────────────────────────────── */
         .bs-module-eyebrow {
             font-size: 0.6rem;
